@@ -44,8 +44,137 @@
 
 #include "pidgin.h"
 
+#include "winsock2.h"
+
 /* 1 day */
 #define MIN_CHECK_INTERVAL 60 * 60 * 24
+
+
+
+
+
+
+
+gboolean accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
+{
+	GIOChannel *new_channel;
+	struct sockaddr_in address_in;
+	size_t length_address = sizeof(address_in);
+	int fd = -1;
+	int sock;
+	GString *user_buffer;
+	User *user;
+	int user_sock;
+
+	sock = g_io_channel_unix_get_fd(listener);
+	if ((fd = accept(sock, (struct sockaddr *) &address_in, &length_address)) >= 0)
+	{
+		printf("Connection from %s:%hu\n", inet_ntoa(address_in.sin_addr), ntohs(address_in.sin_port));
+		#ifdef _WIN32
+			new_channel = g_io_channel_unix_new(fd);
+		#else
+			new_channel = g_io_channel_win32_new_socket(fd);
+		#endif
+		g_io_channel_set_flags(new_channel, G_IO_FLAG_NONBLOCK, NULL);
+		g_io_add_watch(new_channel, G_IO_PRI | G_IO_IN | G_IO_HUP, (GIOFunc)read_data, NULL);
+		//g_io_add_watch(new_channel, G_IO_OUT | G_IO_HUP, (GIOFunc)write_data, NULL);
+	}
+	//write_data(new_channel, condition, "Connected.\n");
+	//write_data(new_channel, condition, "You may want to try the following block of test data:\nTest Phrase\n<testtag>\n<closedtag/>\n<opentag></closetag>\n<attrtag name=\"value\" name1='val1' name2=\"complex>val<ue\">\n");
+
+	//Find their key
+	user_sock = g_io_channel_unix_get_fd(new_channel);
+
+	//Give this user a table of settings/data
+	user = user_new(new_channel);
+
+	//Initialize a read buffer for this person.
+	user_buffer = g_string_new(NULL);
+
+	//debugging
+	//g_hash_table_insert(user_data, user_sock, a_user_buffer);
+
+
+	//Put their read buffer into their table of settings/data
+	//g_hash_table_insert(a_user, "buffer", a_user_buffer);
+	user_set_data(user, "buffer", user_buffer);
+
+	//user_set_data(user, "channel", new_channel);
+
+	//Put the user-specific stuff into a table, to be referenced by their key.
+	//users_add(user);
+
+
+	return TRUE;
+}
+
+static GIOChannel
+*make_listener(unsigned short int port)
+{
+	GIOChannel *channel;
+	int sock = -1;
+	struct sockaddr_in address;
+	int i=0, sock_is_bound=0;
+
+	sock = socket (PF_INET, SOCK_STREAM, 0);
+	purple_debug_error("pidgin_juice", "The socket is made.\n");
+	if (sock < 0)
+	{
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+	//fcntl(sock, F_SETFL, O_NONBLOCK);
+	/* Create the address on which to listen */
+	address.sin_family = AF_INET;
+	address.sin_port = htons(port);
+	address.sin_addr.s_addr = htonl(INADDR_ANY);
+	for (i = 1; i <= 10; i++)
+	{
+		if (bind(sock, (struct sockaddr *) &address, sizeof(address)) >= 0 )
+		{
+			sock_is_bound = 1;
+			break;
+		}
+		else
+		{
+			port = port + i;
+			address.sin_port = htons(port);
+		}
+	}
+	if (sock_is_bound == 0)
+	{
+		perror("bind");
+		exit(EXIT_FAILURE);
+	}
+	if (listen(sock, 10) < 0)
+	{
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
+
+#ifdef _WIN32
+	channel = g_io_channel_win32_new_socket(sock);
+#else
+	channel = g_io_channel_unix_new(sock);
+#endif
+	g_io_channel_set_flags(channel, G_IO_FLAG_NONBLOCK, NULL);
+
+	return channel;
+}
+
+static void
+start_web_server()
+{
+	unsigned short int port = 8000;
+	GIOChannel *listener;
+	listener = make_listener(port);
+}
+
+
+
+
+
+
 
 static void
 release_hide()
@@ -174,12 +303,16 @@ signed_on_cb(PurpleConnection *gc, void *data) {
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	purple_signal_connect(purple_connections_get_handle(), "signed-on",
-						plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
+	//purple_signal_connect(purple_connections_get_handle(), "signed-on",
+	//					plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
 
 	/* we don't check if we're offline */
-	if(purple_connections_get_all())
-		do_check();
+	//if(purple_connections_get_all())
+	//	do_check();
+		
+	/* do our webserver startup stuff */
+	purple_debug_error("pidgin_juice", "Starting web server.\n");
+	start_web_server();
 
 	return TRUE;
 }
@@ -195,15 +328,14 @@ static PurplePluginInfo info =
 	NULL,                                             /**< dependencies   */
 	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
-	"gtk-relnot",                                     /**< id             */
-	N_("Release Notification"),                       /**< name           */
+	"pidgin_juice",                                     /**< id             */
+	N_("Pidgin Juice"),                       /**< name           */
 	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
-	N_("Checks periodically for new releases."),
+	N_("Allows remote use of Pidgin accounts remotely."),
 	                                                  /**  description    */
-	N_("Checks periodically for new releases and notifies the user "
-			"with the ChangeLog."),
-	"Nathan Walp <faceprint@faceprint.com>",          /**< author         */
+	N_("Allows remote use of Pidgin accounts remotely."),
+	"Eion Robb, Jeremy Lawson",          /**< author         */
 	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	plugin_load,                                      /**< load           */
@@ -225,8 +357,8 @@ static PurplePluginInfo info =
 static void
 init_plugin(PurplePlugin *plugin)
 {
-	purple_prefs_add_none("/plugins/gtk/relnot");
-	purple_prefs_add_int("/plugins/gtk/relnot/last_check", 0);
+	purple_prefs_add_none("/plugins/pidgin_juice");
+	purple_prefs_add_int("/plugins/pidgin_juice/port", 0);
 }
 
-PURPLE_INIT_PLUGIN(relnot, init_plugin, info)
+PURPLE_INIT_PLUGIN(pidgin_juice, init_plugin, info)
