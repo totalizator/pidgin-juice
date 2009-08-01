@@ -46,12 +46,33 @@
 
 #include "winsock2.h"
 
-/* 1 day */
-#define MIN_CHECK_INTERVAL 60 * 60 * 24
 
-
-
-
+static void
+parse_request(GString *request_string, GString *reply_string)
+{
+	GString *uri = NULL;
+	int length = 0;
+	
+	if (strlen(request_string->str) <= 5 || strncmp(request_string->str, "GET ", 5) != 0)
+	{
+		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
+		return;
+	}
+	else
+	{
+		uri = g_string_new(request_string->str+5);
+	}
+	
+	length = strlen("Thank you for requesting \n");
+	length += strlen(uri->str);
+	
+	g_string_append(reply_string, "HTTP/1.0 200 OK\n");
+	g_string_append_printf(reply_string, "Content-length: %d\n", length);
+	g_string_append(reply_string, "\n");
+	g_string_append_printf(reply_string, "Thank you for requesting %s\n", uri->str);
+	
+	g_string_free(uri, TRUE);
+}
 
 static gboolean
 write_data (GIOChannel *gio, GIOCondition condition, gpointer data)
@@ -59,8 +80,6 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data)
 	GIOStatus ret;
 	GError *err = NULL;
 	gsize len;
-	
-	purple_debug_error("pidgin_juice", "about to write.\n");
 
 	if (condition & G_IO_HUP)
 		g_error ("Write end of pipe died!\n");
@@ -73,9 +92,53 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data)
 	else
 		g_io_channel_flush(gio, NULL);
 
-	//printf ("Wrote %u bytes:%s\n", len, data);
-	printf(">>> %s\n", data);
+	return TRUE;
+}
 
+static gboolean
+read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
+{
+	GError *err = NULL;
+	gchar character;
+	gsize len = 0;
+	GString *request_string = NULL, *request_buffer, *reply_string;
+	int *sock;
+
+	//Find the user's key(sock) and put it in shared memory space
+	sock = g_new(gint, 1);
+	*sock = g_io_channel_unix_get_fd(channel);
+
+	//Read everything they give us.
+	request_string = g_string_new(NULL);
+	while(!(condition & G_IO_HUP)
+		&& g_io_channel_read_chars (channel, &character, 1, &len, &err)
+		&& len)
+	{
+		request_string = g_string_append_c(request_string, character);
+	}
+
+	//If they didn't give us anything, they probably closed the connection.
+	if (!len && !request_string->len)
+	{
+		g_string_free(request_string, TRUE);
+		g_io_channel_close(channel);
+		return FALSE;
+	}
+	
+	//While we're not using an external buffer, make sure we initialize it
+	request_buffer = g_string_new(NULL);
+	g_string_append_printf(request_buffer, "%s", request_string->str);
+	
+	reply_string = g_string_new(NULL);
+	parse_request(request_buffer, reply_string);
+	
+	write_data(channel, condition, reply_string->str);
+	
+	//Free resources allocated in this function
+	g_string_free(request_string, TRUE);
+	g_string_free(request_buffer, TRUE);
+	g_string_free(reply_string, TRUE);
+	
 	return TRUE;
 }
 
@@ -101,38 +164,17 @@ accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
 		printf("Connection from %s:%hu\n", inet_ntoa(address_in.sin_addr), ntohs(address_in.sin_port));
 		new_channel = g_io_channel_unix_new(fd);
 		g_io_channel_set_flags(new_channel, G_IO_FLAG_NONBLOCK, NULL);
-		//g_io_add_watch(new_channel, G_IO_PRI | G_IO_IN | G_IO_HUP, (GIOFunc)read_data, NULL);
-		//g_io_add_watch(new_channel, G_IO_OUT | G_IO_HUP, (GIOFunc)write_data, NULL);
+		g_io_add_watch(new_channel, G_IO_PRI | G_IO_IN | G_IO_HUP, (GIOFunc)read_data, NULL);
 	}
 	else
 	{
 		return FALSE;
 	}
 	write_data(new_channel, condition, "Connected.\n");
-	//write_data(new_channel, condition, "You may want to try the following block of test data:\nTest Phrase\n<testtag>\n<closedtag/>\n<opentag></closetag>\n<attrtag name=\"value\" name1='val1' name2=\"complex>val<ue\">\n");
 
 	//Find their key
 	user_sock = g_io_channel_unix_get_fd(new_channel);
-	purple_debug_error("pidgin_juice", "Accepted connection. Get user socket.\n");
-
-	//Give this user a table of settings/data
-	//user = user_new(new_channel);
-
-	//Initialize a read buffer for this person.
-	//user_buffer = g_string_new(NULL);
-
-	//debugging
-	//g_hash_table_insert(user_data, user_sock, a_user_buffer);
-
-
-	//Put their read buffer into their table of settings/data
-	//user_set_data(user, "buffer", user_buffer);
-
-	//user_set_data(user, "channel", new_channel);
-
-	//Put the user-specific stuff into a table, to be referenced by their key.
-	//users_add(user);
-
+	purple_debug_info("pidgin_juice", "Accepted connection. Got user socket.\n");
 
 	return TRUE;
 }
@@ -208,126 +250,15 @@ start_web_server()
 
 
 
-static void
-release_hide()
-{
-	/* No-op.  We may use this method in the future to avoid showing
-	 * the popup twice */
-}
 
-static void
-release_show()
-{
-	purple_notify_uri(NULL, PURPLE_WEBSITE);
-}
 
-static void
-version_fetch_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *response, size_t len, const gchar *error_message)
-{
-	gchar *cur_ver;
-	const char *tmp, *changelog;
-	char response_code[4];
-	GtkWidget *release_dialog;
 
-	GString *message;
-	int i = 0;
-
-	if(error_message || !response || !len)
-		return;
-
-	memset(response_code, '\0', sizeof(response_code));
-	/* Parse the status code - the response should be in the form of "HTTP/?.? 200 ..." */
-	if ((tmp = strstr(response, " ")) != NULL) {
-		tmp++;
-		/* Read the 3 digit status code */
-		if (len - (tmp - response) > 3) {
-			memcpy(response_code, tmp, 3);
-		}
-	}
-
-	if (strcmp(response_code, "200") != 0) {
-		purple_debug_error("relnot", "Didn't recieve a HTTP status code of 200.\n");
-		return;
-	}
-
-	/* Go to the start of the data */
-	if((changelog = strstr(response, "\r\n\r\n")) == NULL) {
-		purple_debug_error("relnot", "Unable to find start of HTTP response data.\n");
-		return;
-	}
-	changelog += 4;
-
-	while(changelog[i] && changelog[i] != '\n') i++;
-
-	/* this basically means the version thing wasn't in the format we were
-	 * looking for so sourceforge is probably having web server issues, and
-	 * we should try again later */
-	if(i == 0)
-		return;
-
-	cur_ver = g_strndup(changelog, i);
-
-	message = g_string_new("");
-	g_string_append_printf(message, _("You can upgrade to %s %s today."),
-			PIDGIN_NAME, cur_ver);
-
-	release_dialog = pidgin_make_mini_dialog(
-		NULL, PIDGIN_STOCK_DIALOG_INFO,
-		_("New Version Available"),
-		message->str,
-		NULL,
-		_("Later"), PURPLE_CALLBACK(release_hide),
-		_("Download Now"), PURPLE_CALLBACK(release_show),
-		NULL);
-
-	pidgin_blist_add_alert(release_dialog);
-
-	g_string_free(message, TRUE);
-	g_free(cur_ver);
-}
-
-static void
-do_check(void)
-{
-	int last_check = purple_prefs_get_int("/plugins/gtk/relnot/last_check");
-	if(!last_check || time(NULL) - last_check > MIN_CHECK_INTERVAL) {
-		gchar *url, *request;
-		const char *host = "pidgin.im";
-		
-		url = g_strdup_printf("http://%s/version.php?version=%s&build=%s",
-				host,
-				purple_core_get_version(),
-#ifdef _WIN32
-				"purple-win32"
-#else
-				"purple"
-#endif
-		);
-
-		request = g_strdup_printf(
-				"GET %s HTTP/1.0\r\n"
-				"Connection: close\r\n"
-				"Accept: */*\r\n"
-				"Host: %s\r\n\r\n",
-				url,
-				host);
-
-		purple_util_fetch_url_request_len(url, TRUE, NULL, FALSE,
-			request, TRUE, -1, version_fetch_cb, NULL);
-
-		g_free(request);
-		g_free(url);
-
-		purple_prefs_set_int("/plugins/gtk/relnot/last_check", time(NULL));
-
-	}
-}
-
+/*
 static void
 signed_on_cb(PurpleConnection *gc, void *data) {
 	do_check();
 }
+*/
 
 /**************************************************************************
  * Plugin stuff
@@ -337,10 +268,6 @@ plugin_load(PurplePlugin *plugin)
 {
 	//purple_signal_connect(purple_connections_get_handle(), "signed-on",
 	//					plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
-
-	/* we don't check if we're offline */
-	//if(purple_connections_get_all())
-	//	do_check();
 		
 	/* do our webserver startup stuff */
 	start_web_server();
