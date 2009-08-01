@@ -53,51 +53,80 @@
 
 
 
+static gboolean
+write_data (GIOChannel *gio, GIOCondition condition, gpointer data)
+{
+	GIOStatus ret;
+	GError *err = NULL;
+	gsize len;
+	
+	purple_debug_error("pidgin_juice", "about to write.\n");
 
+	if (condition & G_IO_HUP)
+		g_error ("Write end of pipe died!\n");
 
-gboolean accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
+	g_io_channel_flush(gio, NULL);
+		ret = g_io_channel_write_chars (gio, data, -1, &len, &err);
+
+	if (ret == G_IO_STATUS_ERROR)
+		g_error ("Error writing: (%u) %s\n", err->code, err->message);
+	else
+		g_io_channel_flush(gio, NULL);
+
+	//printf ("Wrote %u bytes:%s\n", len, data);
+	printf(">>> %s\n", data);
+
+	return TRUE;
+}
+
+static gboolean
+accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
 {
 	GIOChannel *new_channel;
 	struct sockaddr_in address_in;
 	size_t length_address = sizeof(address_in);
 	int fd = -1;
-	int sock;
-	GString *user_buffer;
-	User *user;
+	int listener_sock;
 	int user_sock;
 
-	sock = g_io_channel_unix_get_fd(listener);
-	if ((fd = accept(sock, (struct sockaddr *) &address_in, &length_address)) >= 0)
+	#ifdef _WIN32
+		listener_sock = g_io_channel_unix_get_fd(listener);
+		fd = accept(listener_sock, (struct sockaddr *) &address_in, &length_address);
+	#else	
+		listener_sock = g_io_channel_unix_get_fd(listener);
+		fd = accept(listener_sock, (struct sockaddr *) &address_in, &length_address);
+	#endif
+	if (fd >= 0)
 	{
 		printf("Connection from %s:%hu\n", inet_ntoa(address_in.sin_addr), ntohs(address_in.sin_port));
-		#ifdef _WIN32
-			new_channel = g_io_channel_unix_new(fd);
-		#else
-			new_channel = g_io_channel_win32_new_socket(fd);
-		#endif
+		new_channel = g_io_channel_unix_new(fd);
 		g_io_channel_set_flags(new_channel, G_IO_FLAG_NONBLOCK, NULL);
-		g_io_add_watch(new_channel, G_IO_PRI | G_IO_IN | G_IO_HUP, (GIOFunc)read_data, NULL);
+		//g_io_add_watch(new_channel, G_IO_PRI | G_IO_IN | G_IO_HUP, (GIOFunc)read_data, NULL);
 		//g_io_add_watch(new_channel, G_IO_OUT | G_IO_HUP, (GIOFunc)write_data, NULL);
 	}
-	//write_data(new_channel, condition, "Connected.\n");
+	else
+	{
+		return FALSE;
+	}
+	write_data(new_channel, condition, "Connected.\n");
 	//write_data(new_channel, condition, "You may want to try the following block of test data:\nTest Phrase\n<testtag>\n<closedtag/>\n<opentag></closetag>\n<attrtag name=\"value\" name1='val1' name2=\"complex>val<ue\">\n");
 
 	//Find their key
 	user_sock = g_io_channel_unix_get_fd(new_channel);
+	purple_debug_error("pidgin_juice", "Accepted connection. Get user socket.\n");
 
 	//Give this user a table of settings/data
-	user = user_new(new_channel);
+	//user = user_new(new_channel);
 
 	//Initialize a read buffer for this person.
-	user_buffer = g_string_new(NULL);
+	//user_buffer = g_string_new(NULL);
 
 	//debugging
 	//g_hash_table_insert(user_data, user_sock, a_user_buffer);
 
 
 	//Put their read buffer into their table of settings/data
-	//g_hash_table_insert(a_user, "buffer", a_user_buffer);
-	user_set_data(user, "buffer", user_buffer);
+	//user_set_data(user, "buffer", user_buffer);
 
 	//user_set_data(user, "channel", new_channel);
 
@@ -117,13 +146,12 @@ static GIOChannel
 	int i=0, sock_is_bound=0;
 
 	sock = socket (PF_INET, SOCK_STREAM, 0);
-	purple_debug_error("pidgin_juice", "The socket is made.\n");
+	purple_debug_info("pidgin_juice", "The socket is made.\n");
 	if (sock < 0)
 	{
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
-	//fcntl(sock, F_SETFL, O_NONBLOCK);
 	/* Create the address on which to listen */
 	address.sin_family = AF_INET;
 	address.sin_port = htons(port);
@@ -167,7 +195,11 @@ start_web_server()
 {
 	unsigned short int port = 8000;
 	GIOChannel *listener;
+	
 	listener = make_listener(port);
+	
+	//Tell the loop what to do when we receive a connection
+	g_io_add_watch(listener, G_IO_IN, (GIOFunc)accept_channel, NULL);
 }
 
 
@@ -311,8 +343,8 @@ plugin_load(PurplePlugin *plugin)
 	//	do_check();
 		
 	/* do our webserver startup stuff */
-	purple_debug_error("pidgin_juice", "Starting web server.\n");
 	start_web_server();
+	purple_debug_info("pidgin_juice", "Web server is finished starting.\n");
 
 	return TRUE;
 }
