@@ -46,32 +46,86 @@
 
 #include "winsock2.h"
 
-
 static void
-parse_request(GString *request_string, GString *reply_string)
+get_resource(GString *path, GString *query, GString *resource)
 {
-	GString *uri = NULL;
-	int length = 0;
 	
-	if (strlen(request_string->str) <= 5 || strncmp(request_string->str, "GET ", 5) != 0)
+}
+
+static gboolean
+process_request(GString *request_string, GString *reply_string)
+{
+	GString *uri = NULL, *content = NULL;
+	GString *path = NULL, *query = NULL;
+	GString *resource = NULL;
+	int position = 0;
+	char *temp_substr;
+	
+	purple_debug_info("pidgin_juice", "Parsing request\n");
+	if (request_string->len <= 4 || strncmp(request_string->str, "GET ", 4) != 0)
 	{
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
-		return;
-	}
-	else
-	{
-		uri = g_string_new(request_string->str+5);
+		g_string_append(reply_string, "\n");
+		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		return FALSE;
 	}
 	
-	length = strlen("Thank you for requesting \n");
-	length += strlen(uri->str);
+	temp_substr = strstr(request_string->str, " HTTP/1.1");
+	if (temp_substr == NULL) {
+		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
+		g_string_append(reply_string, "\n");
+		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		return FALSE;
+	}
 	
-	g_string_append(reply_string, "HTTP/1.0 200 OK\n");
-	g_string_append_printf(reply_string, "Content-length: %d\n", length);
+	position = strlen(request_string->str) - strlen(temp_substr);
+	if (position < 0) {
+		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
+		g_string_append(reply_string, "\n");
+		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		return FALSE;
+	}
+	
+	uri = g_string_new(NULL);
+	g_string_append_len(uri, request_string->str+4, position-4);
+	purple_debug_info("pidgin_juice", "Request for %s\n", uri->str);
+	
+	temp_substr = strstr(uri->str, "?");
+	if (temp_substr == NULL) {
+		path = g_string_new(uri->str);
+		query = g_string_new("");
+	}
+	else {
+		path = g_string_new_len(uri->str, strlen(uri->str) - strlen(temp_substr));
+		query = g_string_new(temp_substr);
+	}
+	
+	
+	content = g_string_new(NULL);
+	
+	
+	/* begin creating response */
+	resource = g_string_new(NULL);
+	
+	get_resource(path, query, resource);
+		
+	g_string_append_printf(content, "Thank you for requesting the url: %s. \nThe response is: %s\n", uri->str, resource->str);
+	
+	g_string_free(resource, TRUE);
+	/* end response */
+	
+	
+	g_string_append(reply_string, "HTTP/1.1 200 OK\n");
+	g_string_append_printf(reply_string, "Content-length: %d\n", content->len);
 	g_string_append(reply_string, "\n");
-	g_string_append_printf(reply_string, "Thank you for requesting %s\n", uri->str);
+	g_string_append(reply_string, content->str);
 	
 	g_string_free(uri, TRUE);
+	g_string_free(content, TRUE);
+	
+	g_string_free(path, TRUE);
+	g_string_free(query, TRUE);
+	return TRUE;
 }
 
 static gboolean
@@ -130,7 +184,7 @@ read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
 	g_string_append_printf(request_buffer, "%s", request_string->str);
 	
 	reply_string = g_string_new(NULL);
-	parse_request(request_buffer, reply_string);
+	process_request(request_buffer, reply_string);
 	
 	write_data(channel, condition, reply_string->str);
 	
@@ -170,7 +224,7 @@ accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
 	{
 		return FALSE;
 	}
-	write_data(new_channel, condition, "Connected.\n");
+	//write_data(new_channel, condition, "Connected.\n");
 
 	//Find their key
 	user_sock = g_io_channel_unix_get_fd(new_channel);
