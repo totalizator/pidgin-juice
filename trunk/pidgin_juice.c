@@ -60,9 +60,9 @@ get_resource(GString *path, GString *query, GString *resource)
 		g_free(json_string);
 		return TRUE;
 	}
-	if (strcmp(path->str, "/index.html") == 0) {
+	if (strncmp(path->str, "/", 1) == 0) {
 		filename = g_string_new(NULL);
-		g_string_append_printf(filename, "%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "index.html");
+		g_string_append_printf(filename, "%s%s%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "juice", G_DIR_SEPARATOR_S, path->str+1);
 		purple_debug_info("pidgin_juice", "filename: %s\n", filename->str);
 		fp = fopen(filename->str, "r");
 		if (fp == NULL) {
@@ -91,6 +91,7 @@ process_request(GString *request_string, GString *reply_string)
 	if (request_string->len <= 4 || strncmp(request_string->str, "GET ", 4) != 0)
 	{
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
+		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
 		return FALSE;
@@ -99,6 +100,7 @@ process_request(GString *request_string, GString *reply_string)
 	temp_substr = strstr(request_string->str, " HTTP/1.1");
 	if (temp_substr == NULL) {
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
+		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
 		return FALSE;
@@ -107,6 +109,7 @@ process_request(GString *request_string, GString *reply_string)
 	position = strlen(request_string->str) - strlen(temp_substr);
 	if (position < 0) {
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
+		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
 		return FALSE;
@@ -117,13 +120,20 @@ process_request(GString *request_string, GString *reply_string)
 	purple_debug_info("pidgin_juice", "Request for %s\n", uri->str);
 	
 	temp_substr = strstr(uri->str, "?");
-	if (temp_substr == NULL) {
+	if (temp_substr == NULL)
+	{
 		path = g_string_new(uri->str);
 		query = g_string_new("");
 	}
-	else {
+	else
+	{
 		path = g_string_new_len(uri->str, strlen(uri->str) - strlen(temp_substr));
 		query = g_string_new(temp_substr);
+	}
+	
+	if (g_str_equal(path->str, "/"))
+	{
+		g_string_append(path, "index.html");
 	}
 	
 	
@@ -140,6 +150,13 @@ process_request(GString *request_string, GString *reply_string)
 	else
 	{
 		purple_debug_info("pidgin_juice", "Could not find resource.\n");
+		g_string_append(reply_string, "HTTP/1.1 404 Not Found\n");
+		g_string_append(reply_string, "Content-length: 0\n");
+		g_string_append(reply_string, "\n");
+		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		g_string_free(resource, TRUE);
+		g_string_free(content, TRUE);
+		return FALSE;
 	}
 	g_string_free(resource, TRUE);
 	/* end response */
