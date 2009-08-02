@@ -81,35 +81,51 @@ juice_GET_buddylist(/* something in here? */)
 		account_username = purple_account_get_username(account);
 		
 		// Set the json nodes
-		display_name_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(display_name_node, display_name);
-		json_object_add_member(json_buddy, "display_name", display_name_node);
+		if (display_name != NULL)
+		{
+			display_name_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(display_name_node, display_name);
+			json_object_add_member(json_buddy, "display_name", display_name_node);
+		}
 		
-		username_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(username_node, username);
-		json_object_add_member(json_buddy, "username", username_node);
+		if (username != NULL)
+		{
+			username_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(username_node, username);
+			json_object_add_member(json_buddy, "username", username_node);
+		}
 		
 		available_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_boolean(available_node, available);
 		json_object_add_member(json_buddy, "available", available_node);
-		/*
-		status_message_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(status_message_node, status_message);
-		json_object_add_member(json_buddy, "status_message", status_message_node);
-		*/
-		purple_debug_info("pidgin_juice", "status_message: %s\n", (status_message?status_message:"(null)"));
 		
-		proto_id_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(proto_id_node, proto_id);
-		json_object_add_member(json_buddy, "proto_id", proto_id_node);
+		if (status_message != NULL)
+		{
+			status_message_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(status_message_node, status_message);
+			json_object_add_member(json_buddy, "status_message", status_message_node);
+		}
 		
-		proto_name_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(proto_name_node, proto_name);
-		json_object_add_member(json_buddy, "proto_name", proto_name_node);
+		if (proto_id != NULL)
+		{
+			proto_id_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(proto_id_node, proto_id);
+			json_object_add_member(json_buddy, "proto_id", proto_id_node);
+		}
 		
-		account_username_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(account_username_node, account_username);
-		json_object_add_member(json_buddy, "account_username", account_username_node);
+		if (proto_name != NULL)
+		{
+			proto_name_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(proto_name_node, proto_name);
+			json_object_add_member(json_buddy, "proto_name", proto_name_node);
+		}
+		
+		if (account_username != NULL)
+		{
+			account_username_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(account_username_node, account_username);
+			json_object_add_member(json_buddy, "account_username", account_username_node);
+		}
 		
 		json_buddy_node = json_node_new(JSON_NODE_OBJECT);
 		json_node_set_object(json_buddy_node, json_buddy);
