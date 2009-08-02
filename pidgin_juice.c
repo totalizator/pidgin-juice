@@ -46,6 +46,7 @@
 
 #include "winsock2.h"
 #include "get_buddylist.c"
+#include "get_buddyicon.c"
 
 static gboolean
 get_resource(GString *path, GString *query, GString *resource)
@@ -53,25 +54,57 @@ get_resource(GString *path, GString *query, GString *resource)
 	FILE *fp = NULL;
 	GString *filename = NULL;
 	gchar *json_string = NULL;
+	GIOChannel *file_channel = NULL;
+	gchar *file_contents = NULL;
+	gsize file_length = 0;
+	gchar **pairs = NULL;
+	GHashTable *keyvals = NULL;
+	gchar **pair = NULL;
+	int i = 0;
 	
-	if (strcmp(path->str, "/buddies_list.js") ==0) {
+	keyvals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	pairs = g_strsplit(query->str, "&", -1);
+	for (i=0; pairs[i]; i++)
+	{
+		pair = g_strsplit(pairs[i], "=", 2);
+		if (pair[0] != NULL)
+		{
+			purple_debug_info("pidgin_juice", "Adding %s, %s to hash table.\n", pair[0], pair[1]);
+			g_hash_table_insert(keyvals, g_strdup(pair[0]), g_strdup(pair[1]?pair[1]:""));
+		}
+		g_strfreev(pair);
+	}
+	g_strfreev(pairs);
+	//g_hash_table_destroy(keyvals);
+	
+	
+	if (g_str_equal(path->str, "/buddy_icon"))
+	{
+		//file_contents = juice_GET_buddyicon(, , );
+		//g_string_append(resource, file_contents);
+		//g_free(file_contents);
+	}
+	if (strcmp(path->str, "/buddies_list.js") ==0)
+	{
 		json_string = juice_GET_buddylist();
 		g_string_append(resource, json_string);
 		g_free(json_string);
 		return TRUE;
 	}
-	if (strncmp(path->str, "/", 1) == 0) {
+	if (strncmp(path->str, "/", 1) == 0)
+	{
 		filename = g_string_new(NULL);
 		g_string_append_printf(filename, "%s%s%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "juice", G_DIR_SEPARATOR_S, path->str+1);
 		purple_debug_info("pidgin_juice", "filename: %s\n", filename->str);
-		fp = fopen(filename->str, "r");
-		if (fp == NULL) {
-			g_string_free(filename, TRUE);
-			return FALSE;
-		}
 		
-		g_string_append(resource, "file exists\n");
-		fclose(fp);
+		file_channel = g_io_channel_new_file(filename->str, "r", NULL);
+		if (file_channel == NULL)
+			return FALSE;
+		
+		g_io_channel_read_to_end(file_channel, &file_contents, NULL, NULL);
+		g_string_append(resource, file_contents);
+		
+		g_io_channel_shutdown(file_channel, TRUE, NULL);
 		g_string_free(filename, TRUE);
 		return TRUE;
 	}
@@ -128,7 +161,7 @@ process_request(GString *request_string, GString *reply_string)
 	else
 	{
 		path = g_string_new_len(uri->str, strlen(uri->str) - strlen(temp_substr));
-		query = g_string_new(temp_substr);
+		query = g_string_new(temp_substr+1);
 	}
 	
 	if (g_str_equal(path->str, "/"))
@@ -142,12 +175,7 @@ process_request(GString *request_string, GString *reply_string)
 	
 	/* begin creating response */
 	resource = g_string_new(NULL);
-	if (get_resource(path, query, resource))
-	{
-		purple_debug_info("pidgin_juice", "Found the resource.\n");
-		g_string_append_printf(content, "Thank you for requesting the url: %s. \nThe response is: %s\n", uri->str, resource->str);
-	}
-	else
+	if (!get_resource(path, query, resource))
 	{
 		purple_debug_info("pidgin_juice", "Could not find resource.\n");
 		g_string_append(reply_string, "HTTP/1.1 404 Not Found\n");
@@ -158,11 +186,14 @@ process_request(GString *request_string, GString *reply_string)
 		g_string_free(content, TRUE);
 		return FALSE;
 	}
+	purple_debug_info("pidgin_juice", "Found the resource.\n");
+	g_string_append_printf(content, resource->str);
 	g_string_free(resource, TRUE);
 	/* end response */
 	
 	
 	g_string_append(reply_string, "HTTP/1.1 200 OK\n");
+	g_string_append(reply_string, "Content-type: text/html\n");
 	g_string_append_printf(reply_string, "Content-length: %d\n", content->len);
 	g_string_append(reply_string, "\n");
 	g_string_append(reply_string, content->str);
