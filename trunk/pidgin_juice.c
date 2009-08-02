@@ -45,11 +45,37 @@
 #include "pidgin.h"
 
 #include "winsock2.h"
+#include "get_buddylist.c"
 
-static void
+static gboolean
 get_resource(GString *path, GString *query, GString *resource)
 {
+	FILE *fp = NULL;
+	GString *filename = NULL;
+	gchar *json_string = NULL;
 	
+	if (strcmp(path->str, "/buddies_list.js") ==0) {
+		json_string = juice_GET_buddylist();
+		g_string_append(resource, json_string);
+		g_free(json_string);
+		return TRUE;
+	}
+	if (strcmp(path->str, "/index.html") == 0) {
+		filename = g_string_new(NULL);
+		g_string_append_printf(filename, "%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "index.html");
+		purple_debug_info("pidgin_juice", "filename: %s\n", filename->str);
+		fp = fopen(filename->str, "r");
+		if (fp == NULL) {
+			g_string_free(filename, TRUE);
+			return FALSE;
+		}
+		
+		g_string_append(resource, "file exists\n");
+		fclose(fp);
+		g_string_free(filename, TRUE);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 static gboolean
@@ -106,11 +132,15 @@ process_request(GString *request_string, GString *reply_string)
 	
 	/* begin creating response */
 	resource = g_string_new(NULL);
-	
-	get_resource(path, query, resource);
-		
-	g_string_append_printf(content, "Thank you for requesting the url: %s. \nThe response is: %s\n", uri->str, resource->str);
-	
+	if (get_resource(path, query, resource))
+	{
+		purple_debug_info("pidgin_juice", "Found the resource.\n");
+		g_string_append_printf(content, "Thank you for requesting the url: %s. \nThe response is: %s\n", uri->str, resource->str);
+	}
+	else
+	{
+		purple_debug_info("pidgin_juice", "Could not find resource.\n");
+	}
 	g_string_free(resource, TRUE);
 	/* end response */
 	
