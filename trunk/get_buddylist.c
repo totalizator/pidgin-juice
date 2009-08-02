@@ -13,9 +13,7 @@
 static gchar *
 juice_GET_buddylist(/* something in here? */)
 {
-	PurpleBlistNode *node;
 	gchar *output;
-	PurpleBlistNodeType type;
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
 	const gchar *status_message;
@@ -99,6 +97,8 @@ juice_GET_buddylist(/* something in here? */)
 		json_node_set_string(status_message_node, status_message);
 		json_object_add_member(json_buddy, "status_message", status_message_node);
 		*/
+		purple_debug_info("pidgin_juice", "status_message: %s\n", (status_message?status_message:"(null)"));
+		
 		proto_id_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_string(proto_id_node, proto_id);
 		json_object_add_member(json_buddy, "proto_id", proto_id_node);
