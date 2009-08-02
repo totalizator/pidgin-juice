@@ -16,7 +16,6 @@ juice_GET_buddylist(/* something in here? */)
 	PurpleBlistNode *node;
 	gchar *output;
 	PurpleBlistNodeType type;
-	GSList *buddies, *current;
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
 	const gchar *status_message;
@@ -42,14 +41,21 @@ juice_GET_buddylist(/* something in here? */)
 	JsonNode *json_buddies_node;
 	JsonGenerator *generator;
 	JsonNode *return_blist_node;
+	PurpleBlistNode *purple_blist_node;
 	
 	return_blist = json_object_new();
 	json_buddies = json_array_new();
 	
- 	buddies = purple_find_buddies(NULL, NULL);
-	for(current = buddies;current; current=current->next)
+	for(purple_blist_node = purple_blist_get_root();
+		purple_blist_node;
+		purple_blist_node = purple_blist_node_next(purple_blist_node, FALSE))
 	{
-		buddy = current->data;
+		if (PURPLE_BLIST_NODE_IS_BUDDY(purple_blist_node))
+		{
+			buddy = (PurpleBuddy *)purple_blist_node;
+		} else {
+			continue;
+		}
 		json_buddy = json_object_new();
 		
 		/*
@@ -107,7 +113,6 @@ juice_GET_buddylist(/* something in here? */)
 		json_node_set_object(json_buddy_node, json_buddy);
 		json_array_add_element(json_buddies, json_buddy_node);
 	}
-	g_slist_free(buddies);
 	
 	json_buddies_node = json_node_new(JSON_NODE_ARRAY);
 	json_node_take_array(json_buddies_node, json_buddies);
