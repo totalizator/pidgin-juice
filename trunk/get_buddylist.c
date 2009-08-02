@@ -10,7 +10,7 @@
 #include <blist.h>
 #include <json-glib/json-glib.h>
 
-gchar *
+static gchar *
 juice_GET_buddylist(/* something in here? */)
 {
 	PurpleBlistNode *node;
@@ -27,7 +27,7 @@ juice_GET_buddylist(/* something in here? */)
 	gboolean available;
 	const gchar *proto_id;
 	const gchar *proto_name;
-	const ghcar *account_username;
+	const gchar *account_username;
 	JsonObject *return_blist;
 	JsonObject *json_buddy;
 	JsonArray *json_buddies;
@@ -39,14 +39,15 @@ juice_GET_buddylist(/* something in here? */)
 	JsonNode *proto_name_node;
 	JsonNode *account_username_node;
 	JsonNode *json_buddy_node;
+	JsonNode *json_buddies_node;
 	JsonGenerator *generator;
 	JsonNode *return_blist_node;
 	
 	return_blist = json_object_new();
 	json_buddies = json_array_new();
 	
- 	buddies_list = purple_find_buddies(NULL, NULL);
-	for(current = buddies_list;current; current=current->next)
+ 	buddies = purple_find_buddies(NULL, NULL);
+	for(current = buddies;current; current=current->next)
 	{
 		buddy = current->data;
 		json_buddy = json_object_new();
@@ -104,16 +105,16 @@ juice_GET_buddylist(/* something in here? */)
 		
 		json_buddy_node = json_node_new(JSON_NODE_OBJECT);
 		json_node_set_object(json_buddy_node, json_buddy);
-		json_array_add_node(json_buddies, json_buddy_node);
+		json_array_add_element(json_buddies, json_buddy_node);
 	}
-	g_slist_free(buddies_list);
+	g_slist_free(buddies);
 	
 	json_buddies_node = json_node_new(JSON_NODE_ARRAY);
 	json_node_take_array(json_buddies_node, json_buddies);
 	json_object_add_member(return_blist, "buddies", json_buddies_node);
 	
 	return_blist_node = json_node_new(JSON_NODE_OBJECT);
-	json_node_add_object(return_blist_node, return_blist);
+	json_node_take_object(return_blist_node, return_blist);
 	
 	generator = json_generator_new();
 	json_generator_set_root(generator, return_blist_node);
