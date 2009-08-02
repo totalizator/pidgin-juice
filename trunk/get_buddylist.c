@@ -56,6 +56,8 @@ juice_GET_buddylist(/* something in here? */)
 		} else {
 			continue;
 		}
+		if (!PURPLE_BUDDY_IS_ONLINE(buddy))
+			continue;
 		json_buddy = json_object_new();
 		
 		/*
@@ -92,11 +94,11 @@ juice_GET_buddylist(/* something in here? */)
 		available_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_boolean(available_node, available);
 		json_object_add_member(json_buddy, "available", available_node);
-		
+		/*
 		status_message_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_string(status_message_node, status_message);
 		json_object_add_member(json_buddy, "status_message", status_message_node);
-		
+		*/
 		proto_id_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_string(proto_id_node, proto_id);
 		json_object_add_member(json_buddy, "proto_id", proto_id_node);
