@@ -49,7 +49,7 @@
 #include "get_buddyicon.c"
 
 static gboolean
-get_resource(GString *path, GString *query, GString *resource)
+get_resource(GString *path, GString *query, gchar **resource_out, gsize *resource_out_length)
 {
 	FILE *fp = NULL;
 	GString *filename = NULL;
@@ -61,6 +61,10 @@ get_resource(GString *path, GString *query, GString *resource)
 	GHashTable *keyvals = NULL;
 	gchar **pair = NULL;
 	int i = 0;
+	GError *error = NULL;
+	GString *resource = NULL;
+	
+	resource = g_string_new(NULL);
 	
 	keyvals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	pairs = g_strsplit(query->str, "&", -1);
@@ -78,11 +82,29 @@ get_resource(GString *path, GString *query, GString *resource)
 	//g_hash_table_destroy(keyvals);
 	
 	
+	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
 	if (g_str_equal(path->str, "/buddy_icon"))
 	{
-		//file_contents = juice_GET_buddyicon(, , );
-		//g_string_append(resource, file_contents);
-		//g_free(file_contents);
+		//Temporary assignments for debugging purposes only. The memory is already allocated and will continue to be used.
+		file_contents = (gchar *)g_hash_table_lookup(keyvals, "buddyname");
+		purple_debug_info("pidgin_juice", "Found: buddyname: %s.\n", file_contents);
+		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_id");
+		purple_debug_info("pidgin_juice", "Found: proto_id: %s.\n", file_contents);
+		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_username");
+		purple_debug_info("pidgin_juice", "Found: proto_username: %s.\n", file_contents);
+		
+		//I need the length from this also, as it is binary data, not string safe
+		file_contents = juice_GET_buddyicon((gchar *)g_hash_table_lookup(keyvals, "buddyname"), (gchar *)g_hash_table_lookup(keyvals, "proto_id"), (gchar *)g_hash_table_lookup(keyvals, "proto_username"));
+		purple_debug_info("purple_juice", "buddy_icon_data address3: %s \n", file_contents);
+		if (file_contents == NULL)
+			return FALSE;
+		
+		*resource_out = file_contents;
+		//resource_out_length = ;
+		
+		//don't free this, the above assignment means it's still being used
+		g_free(file_contents);
+		return TRUE;
 	}
 	if (strcmp(path->str, "/buddies_list.js") ==0)
 	{
@@ -101,8 +123,25 @@ get_resource(GString *path, GString *query, GString *resource)
 		if (file_channel == NULL)
 			return FALSE;
 		
-		g_io_channel_read_to_end(file_channel, &file_contents, NULL, NULL);
-		g_string_append(resource, file_contents);
+		g_io_channel_set_encoding(file_channel, NULL, &error);
+		if (error)
+			purple_debug_info("pidgin_juice", "error: %s\n", error->message);
+			
+		*resource_out = NULL; *resource_out_length = NULL;
+		
+		//g_io_channel_read_to_end(file_channel, &file_contents, &file_length, &error);
+		g_file_get_contents(filename->str, &file_contents, &file_length, &error);
+		purple_debug_info("pidgin_juice", "file length: %d\n", file_length);
+		if (error)
+			purple_debug_info("pidgin_juice", "error: %s\n", error->message);
+		
+		*resource_out_length = file_length;
+		*resource_out = file_contents;
+		
+		
+		//don't free these, the above are still using the memory!
+		//g_free(file_contents);
+		//g_free(file_length);
 		
 		g_io_channel_shutdown(file_channel, TRUE, NULL);
 		g_string_free(filename, TRUE);
@@ -112,11 +151,13 @@ get_resource(GString *path, GString *query, GString *resource)
 }
 
 static gboolean
-process_request(GString *request_string, GString *reply_string)
+process_request(GString *request_string, gchar **reply_out, gsize *reply_out_length)
 {
-	GString *uri = NULL, *content = NULL;
+	GString *uri = NULL;
 	GString *path = NULL, *query = NULL;
-	GString *resource = NULL;
+	GString *reply_string = NULL;
+	gchar *resource = NULL;
+	gsize resource_length = 0;
 	int position = 0;
 	char *temp_substr;
 	
@@ -169,37 +210,48 @@ process_request(GString *request_string, GString *reply_string)
 		g_string_append(path, "index.html");
 	}
 	
-	
-	content = g_string_new(NULL);
-	
-	
 	/* begin creating response */
-	resource = g_string_new(NULL);
-	if (!get_resource(path, query, resource))
+	if (!get_resource(path, query, &resource, &resource_length))
 	{
 		purple_debug_info("pidgin_juice", "Could not find resource.\n");
 		g_string_append(reply_string, "HTTP/1.1 404 Not Found\n");
 		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
-		g_string_free(resource, TRUE);
-		g_string_free(content, TRUE);
 		return FALSE;
 	}
+	*reply_out = g_strdup(""); *reply_out_length = 0;
 	purple_debug_info("pidgin_juice", "Found the resource.\n");
-	g_string_append_printf(content, resource->str);
-	g_string_free(resource, TRUE);
 	/* end response */
 	
-	
+	reply_string = g_string_new(NULL);
 	g_string_append(reply_string, "HTTP/1.1 200 OK\n");
-	g_string_append(reply_string, "Content-type: text/html\n");
-	g_string_append_printf(reply_string, "Content-length: %d\n", content->len);
+	/* set appropriate mime type */
+	if (g_strrstr(path->str, ".png") != NULL && strlen(g_strrstr(path->str, ".png")) == 4)
+		g_string_append(reply_string, "Content-type: image/png\n");
+	if (g_strrstr(path->str, ".html") != NULL && strlen(g_strrstr(path->str, ".html")) == 5)
+		g_string_append(reply_string, "Content-type: text/html\n");
+	/* end mime type */
+	g_string_append_printf(reply_string, "Content-length: %d\n", resource_length);
 	g_string_append(reply_string, "\n");
-	g_string_append(reply_string, content->str);
+	
+	/* turn reply string into binary data */
+	//g_string_append(reply_string, resource);
+
+	*reply_out_length = resource_length + strlen(reply_string->str);	
+	*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (1 + *reply_out_length));
+	
+	memcpy(*reply_out, reply_string->str, strlen(reply_string->str)+1);
+	memcpy((*reply_out)+strlen(reply_string->str), resource, resource_length);
+	//memcpy((*reply_out), resource, resource_length);
+	//purple_debug_info("pidgin_juice", "reply string1: %d\n", *reply_out_length);
+	//return TRUE;
+	g_string_free(reply_string, TRUE);
+	
+	purple_debug_info("pidgin_juice", "reply string: %s\n", *reply_out);
+	//purple_debug_info("pidgin_juice", "resource: %s\n", resource);
 	
 	g_string_free(uri, TRUE);
-	g_string_free(content, TRUE);
 	
 	g_string_free(path, TRUE);
 	g_string_free(query, TRUE);
@@ -207,18 +259,20 @@ process_request(GString *request_string, GString *reply_string)
 }
 
 static gboolean
-write_data (GIOChannel *gio, GIOCondition condition, gpointer data)
+write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length)
 {
 	GIOStatus ret;
 	GError *err = NULL;
-	gsize len;
+	gsize len = 0;
 
 	if (condition & G_IO_HUP)
 		g_error ("Write end of pipe died!\n");
 
 	g_io_channel_flush(gio, NULL);
-		ret = g_io_channel_write_chars (gio, data, -1, &len, &err);
-
+	purple_debug_info("pidgin_juice", "data_length: %d\n", data_length);
+	g_io_channel_set_encoding(gio, NULL, NULL);
+	ret = g_io_channel_write_chars (gio, data, data_length, &len, &err);
+	
 	if (ret == G_IO_STATUS_ERROR)
 		g_error ("Error writing: (%u) %s\n", err->code, err->message);
 	else
@@ -233,7 +287,9 @@ read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
 	GError *err = NULL;
 	gchar character;
 	gsize len = 0;
-	GString *request_string = NULL, *request_buffer, *reply_string;
+	GString *request_string = NULL, *request_buffer;
+	gchar *reply = NULL;
+	gsize reply_length = 0;
 	int *sock;
 
 	//Find the user's key(sock) and put it in shared memory space
@@ -261,15 +317,14 @@ read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
 	request_buffer = g_string_new(NULL);
 	g_string_append_printf(request_buffer, "%s", request_string->str);
 	
-	reply_string = g_string_new(NULL);
-	process_request(request_buffer, reply_string);
+	process_request(request_buffer, &reply, &reply_length);
 	
-	write_data(channel, condition, reply_string->str);
+	write_data(channel, condition, reply, reply_length);
 	
 	//Free resources allocated in this function
 	g_string_free(request_string, TRUE);
 	g_string_free(request_buffer, TRUE);
-	g_string_free(reply_string, TRUE);
+	g_free(reply);
 	
 	return TRUE;
 }
