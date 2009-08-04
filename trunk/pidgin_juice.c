@@ -83,27 +83,33 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	
 	
 	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
-	if (g_str_equal(path->str, "/buddy_icon"))
+	if (g_str_equal(path->str, "/buddy_icon.png"))
 	{
 		//Temporary assignments for debugging purposes only. The memory is already allocated and will continue to be used.
 		file_contents = (gchar *)g_hash_table_lookup(keyvals, "buddyname");
-		purple_debug_info("pidgin_juice", "Found: buddyname: %s.\n", file_contents);
+		purple_debug_info("pidgin_juice", "Found: buddyname: %d.\n", file_contents);
 		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_id");
-		purple_debug_info("pidgin_juice", "Found: proto_id: %s.\n", file_contents);
+		purple_debug_info("pidgin_juice", "Found: proto_id: %d.\n", file_contents);
 		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_username");
-		purple_debug_info("pidgin_juice", "Found: proto_username: %s.\n", file_contents);
+		purple_debug_info("pidgin_juice", "Found: proto_username: %d.\n", file_contents);
+		
+		*resource_out = NULL;
+		*resource_out_length = 0;
 		
 		//I need the length from this also, as it is binary data, not string safe
-		file_contents = juice_GET_buddyicon((gchar *)g_hash_table_lookup(keyvals, "buddyname"), (gchar *)g_hash_table_lookup(keyvals, "proto_id"), (gchar *)g_hash_table_lookup(keyvals, "proto_username"));
-		purple_debug_info("purple_juice", "buddy_icon_data address3: %s \n", file_contents);
+		file_contents = juice_GET_buddyicon((gchar *)g_hash_table_lookup(keyvals, "buddyname"), (gchar *)g_hash_table_lookup(keyvals, "proto_id"), (gchar *)g_hash_table_lookup(keyvals, "proto_username"), &file_length);
+		//purple_debug_info("purple_juice", "buddy_icon_data address3: %s \n", file_contents);
 		if (file_contents == NULL)
 			return FALSE;
+			
+		purple_debug_info("pidgin_juice", "buddy icon data file contents: %d\n", file_length);
+		//purple_debug_info("pidgin_juice", "buddy icon data file contents: %s\n", file_contents);
 		
 		*resource_out = file_contents;
-		//resource_out_length = ;
+		*resource_out_length = file_length;
 		
 		//don't free this, the above assignment means it's still being used
-		g_free(file_contents);
+		//g_free(file_contents);
 		return TRUE;
 	}
 	if (strcmp(path->str, "/buddies_list.js") ==0)
@@ -266,15 +272,19 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	gsize len = 0;
 
 	if (condition & G_IO_HUP)
-		g_error ("Write end of pipe died!\n");
+		purple_debug_error("pidgin_juice", "Write end of pipe died!\n");
 
 	g_io_channel_flush(gio, NULL);
 	purple_debug_info("pidgin_juice", "data_length: %d\n", data_length);
 	g_io_channel_set_encoding(gio, NULL, NULL);
 	ret = g_io_channel_write_chars (gio, data, data_length, &len, &err);
 	
+	//DONT REMOVE THIS DEBUG.
+	//for some magical mystical reason it is the only thing ensuring the end of the buddy icon is sent
+	purple_debug_info("pidgin_juice", "wrote %d bytes\nError: %d; %d; %d; %d\n", len, ret==G_IO_STATUS_ERROR, ret==G_IO_STATUS_NORMAL, ret==G_IO_STATUS_EOF, ret==G_IO_STATUS_AGAIN);
+	
 	if (ret == G_IO_STATUS_ERROR)
-		g_error ("Error writing: (%u) %s\n", err->code, err->message);
+		purple_debug_error("pidgin_juice", "Error writing: (%u) %s\n", err->code, err->message);
 	else
 		g_io_channel_flush(gio, NULL);
 
