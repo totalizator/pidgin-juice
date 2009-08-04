@@ -11,7 +11,7 @@
 
 
 static gchar *
-juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username)
+juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
 {
 	PurpleBuddyIcon *icon;
 	PurpleAccount *account;
@@ -29,12 +29,17 @@ juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username)
 	purple_debug_info("purple_juice", "icon not null\n");
 	
 	buddy_icon_data = purple_buddy_icon_get_data(icon, &buddy_icon_len);
-	purple_debug_info("purple_juice", "buddy_icon_data address: %d \n", buddy_icon_data);
-	buddy_icon_data = g_strndup(buddy_icon_data, buddy_icon_len);
-	purple_debug_info("purple_juice", "buddy_icon_data address2: %d \n", buddy_icon_data);
+	//purple_debug_info("purple_juice", "buddy_icon_data address: %d \n", buddy_icon_data);
+	
+	
+	buddy_icon_data = g_memdup(buddy_icon_data, buddy_icon_len);
+	
+	
+	//purple_debug_info("purple_juice", "buddy_icon_data address2: %d \n", buddy_icon_data);
 	
 	purple_buddy_icon_unref(icon);
-	purple_debug_info("purple_juice", "buddy_icon_data address3: %d \n", buddy_icon_data);
+	//purple_debug_info("purple_juice", "buddy_icon_data address3: %d \n", buddy_icon_data);
 	
+	*length = buddy_icon_len;
 	return buddy_icon_data;
 }
