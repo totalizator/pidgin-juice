@@ -63,9 +63,7 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	int i = 0;
 	GError *error = NULL;
 	GString *resource = NULL;
-	
-	resource = g_string_new(NULL);
-	
+		
 	keyvals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	pairs = g_strsplit(query->str, "&", -1);
 	for (i=0; pairs[i]; i++)
@@ -115,8 +113,8 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	if (strcmp(path->str, "/buddies_list.js") ==0)
 	{
 		json_string = juice_GET_buddylist();
-		g_string_append(resource, json_string);
-		g_free(json_string);
+		*resource_out = json_string;
+		*resource_out_length = strlen(json_string);
 		return TRUE;
 	}
 	if (strncmp(path->str, "/", 1) == 0)
@@ -231,15 +229,15 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	/* end response */
 	
 	reply_string = g_string_new(NULL);
-	g_string_append(reply_string, "HTTP/1.1 200 OK\n");
+	g_string_append(reply_string, "HTTP/1.1 200 OK\r\n");
 	/* set appropriate mime type */
 	if (g_strrstr(path->str, ".png") != NULL && strlen(g_strrstr(path->str, ".png")) == 4)
-		g_string_append(reply_string, "Content-type: image/png\n");
+		g_string_append(reply_string, "Content-type: image/png\r\n");
 	if (g_strrstr(path->str, ".html") != NULL && strlen(g_strrstr(path->str, ".html")) == 5)
-		g_string_append(reply_string, "Content-type: text/html\n");
+		g_string_append(reply_string, "Content-type: text/html\r\n");
 	/* end mime type */
-	g_string_append_printf(reply_string, "Content-length: %d\n", resource_length);
-	g_string_append(reply_string, "\n");
+	g_string_append_printf(reply_string, "Content-length: %d\r\n", resource_length);
+	g_string_append(reply_string, "\r\n");
 	
 	/* turn reply string into binary data */
 	//g_string_append(reply_string, resource);
@@ -287,6 +285,7 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 		purple_debug_error("pidgin_juice", "Error writing: (%u) %s\n", err->code, err->message);
 	else
 		g_io_channel_flush(gio, NULL);
+	g_io_channel_flush(gio, NULL);
 
 	return TRUE;
 }
@@ -348,6 +347,8 @@ accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
 	int fd = -1;
 	int listener_sock;
 	int user_sock;
+	
+	purple_debug_info("pidgin_juice", "Connection.\n");
 
 	#ifdef _WIN32
 		listener_sock = g_io_channel_unix_get_fd(listener);
@@ -429,6 +430,8 @@ static GIOChannel
 	return channel;
 }
 
+static GIOChannel *web_server = NULL;
+
 static void
 start_web_server()
 {
@@ -436,19 +439,17 @@ start_web_server()
 	GIOChannel *listener;
 	
 	listener = make_listener(port);
+	web_server = listener;
 	
 	//Tell the loop what to do when we receive a connection
 	g_io_add_watch(listener, G_IO_IN, (GIOFunc)accept_channel, NULL);
 }
 
-
-
-
-
-
-
-
-
+static void
+stop_web_server()
+{
+	
+}
 
 /*
 static void
@@ -470,6 +471,12 @@ plugin_load(PurplePlugin *plugin)
 	start_web_server();
 	purple_debug_info("pidgin_juice", "Web server is finished starting.\n");
 
+	return TRUE;
+}
+
+static gboolean
+plugin_unload(PurplePlugin *plugin)
+{
 	return TRUE;
 }
 
@@ -495,7 +502,7 @@ static PurplePluginInfo info =
 	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	plugin_load,                                      /**< load           */
-	NULL,                                             /**< unload         */
+	plugin_unload,                                             /**< unload         */
 	NULL,                                             /**< destroy        */
 
 	NULL,                                             /**< ui_info        */
