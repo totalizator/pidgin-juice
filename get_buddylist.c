@@ -16,7 +16,8 @@ juice_GET_buddylist(/* something in here? */)
 	gchar *output;
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
-	const gchar *status_message;
+	gchar *status_message_unescaped;
+	gchar *status_message;
 	const gchar *display_name;
 	const gchar *username;
 	PurpleBuddyIcon *icon;
@@ -72,7 +73,15 @@ juice_GET_buddylist(/* something in here? */)
 		icon = purple_buddy_get_icon(buddy);
 		
 		status = purple_presence_get_active_status(purple_buddy_get_presence(buddy));
-		status_message = purple_status_get_attr_string (status, "message");
+		status_message_unescaped = purple_status_get_attr_string (status, "message");
+		if (status_message_unescaped == NULL)
+		{
+			status_message = NULL;
+		}
+		else
+		{
+			status_message = g_strescape(status_message_unescaped, "");
+		}
 		available = purple_status_is_available(status);
 		
 		account = purple_buddy_get_account(buddy);
