@@ -9,7 +9,6 @@
 
 #include <json-glib/json-glib.h>
 
-
 static gchar *
 juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
 {

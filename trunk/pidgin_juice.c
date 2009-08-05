@@ -81,15 +81,42 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	
 	
 	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
+	if (g_str_equal(path->str, "/send_im.js"))
+	{
+		
+		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup(keyvals, "buddyname"), 
+										  (gchar *)g_hash_table_lookup(keyvals, "proto_id"), 
+										  (gchar *)g_hash_table_lookup(keyvals, "proto_username"),
+										  (gchar *)g_hash_table_lookup(keyvals, "message"), 
+										  resource_out_length);
+		if (*resource_out)
+			return TRUE;
+		return FALSE;
+	} else
+	if (g_str_equal(path->str, "/send_typing.js"))
+	{
+		if (g_str_equal(g_hash_table_lookup(keyvals, "typing"), "1"))
+		{
+			*resource_out = juice_POST_typing((gchar *)g_hash_table_lookup(keyvals, "buddyname"), 
+											  (gchar *)g_hash_table_lookup(keyvals, "proto_id"), 
+											  (gchar *)g_hash_table_lookup(keyvals, "proto_username"), 
+											  resource_out_length);
+		} else {
+			*resource_out = juice_POST_nottyping((gchar *)g_hash_table_lookup(keyvals, "buddyname"), 
+												 (gchar *)g_hash_table_lookup(keyvals, "proto_id"), 
+												 (gchar *)g_hash_table_lookup(keyvals, "proto_username"), 
+												 resource_out_length);
+		}
+		if (*resource_out)
+			return TRUE;
+		return FALSE;
+	} else
 	if (g_str_equal(path->str, "/buddy_icon.png"))
 	{
 		//Temporary assignments for debugging purposes only. The memory is already allocated and will continue to be used.
 		file_contents = (gchar *)g_hash_table_lookup(keyvals, "buddyname");
-		purple_debug_info("pidgin_juice", "Found: buddyname: %d.\n", file_contents);
 		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_id");
-		purple_debug_info("pidgin_juice", "Found: proto_id: %d.\n", file_contents);
 		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_username");
-		purple_debug_info("pidgin_juice", "Found: proto_username: %d.\n", file_contents);
 		
 		*resource_out = NULL;
 		*resource_out_length = 0;
@@ -109,14 +136,14 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 		//don't free this, the above assignment means it's still being used
 		//g_free(file_contents);
 		return TRUE;
-	}
+	} else
 	if (strcmp(path->str, "/buddies_list.js") ==0)
 	{
 		json_string = juice_GET_buddylist();
 		*resource_out = json_string;
 		*resource_out_length = strlen(json_string);
 		return TRUE;
-	}
+	} else
 	if (strncmp(path->str, "/", 1) == 0)
 	{
 		filename = g_string_new(NULL);

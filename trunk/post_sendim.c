@@ -25,12 +25,19 @@ juice_find_buddy(gchar *buddyname, gchar *proto_id, gchar *proto_username)
 }
 
 static gchar *
-juice_POST_sendim(gchar *buddyname, gchar *proto_id, gchar *proto_username, gchar *message, gsize *length)
+juice_POST_sendim(const gchar *buddyname, const gchar *proto_id, const gchar *proto_username, const gchar *message, gsize *length)
 {
 	PurpleAccount *account;
 	gint result;
 	gchar *return_string;
 	const gchar *reason;
+	
+	if (!buddyname || !proto_id || !proto_username)
+	{
+		if (length != NULL)
+			*length = 0;
+		return NULL;
+	}
 	
 	account = purple_accounts_find(proto_username, proto_id);
 	result = serv_send_im(purple_account_get_connection(account), buddyname, message, PURPLE_MESSAGE_SEND);
