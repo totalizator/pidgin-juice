@@ -52,8 +52,8 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 		msg = cur->data;
 		
 		flags = purple_conversation_message_get_flags(msg);
-		if (flags != PURPLE_MESSAGE_SEND ||
-			flags != PURPLE_MESSAGE_RECV)
+		if (flags & PURPLE_MESSAGE_SEND ||
+			flags & PURPLE_MESSAGE_RECV)
 		{
 			continue;
 		}
@@ -72,7 +72,7 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 		
 		type_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_string(sender_node,
-							 (flags==PURPLE_MESSAGE_SEND?"sent":"received"));
+							 (flags & PURPLE_MESSAGE_SEND?"sent":"received"));
 		json_object_add_member(json_message, "type", type_node);
 		
 		timestamp_node = json_node_new(JSON_NODE_VALUE);
