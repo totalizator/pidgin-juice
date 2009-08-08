@@ -14,6 +14,7 @@
 			<h1>Contacts</h1>
 			<a class="button" href="#" onclick="setTimeout(get_buddies, 300);">Refresh</a>
 			<ul>
+				<li><a href="#" onclick="change_page('chats', +1);">Conversations</a></li>
 			</ul>
 		</div>
 		
@@ -33,10 +34,11 @@
 		
 		<div id="chat">
 			<h1>Chat</h1>
-			<a class="button" href="#" onclick="alert("can't close chats yet");">Close</a>
-			<a class="button homeButton" href="#" onclick="change_page('chats', -1);">Chats</a>
+			<a class="button" href="#" onclick="alert('cant close chats yet'); change_page('contacts');">Close</a>
+			<a class="button homeButton" href="#" onclick="change_page('contacts', -1);">Contacts</a>
 			<ul>
 			</ul>
+			<div><textarea style="background-color:yellow;"></textarea></div>
 		</div>
 		
 		<div id="other">
