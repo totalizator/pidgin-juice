@@ -10,13 +10,21 @@
 #include <json-glib/json-glib.h>
 
 static gchar *
-juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
+//juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
+juice_GET_buddyicon(GHashTable *$_GET, gsize *length)
 {
 	PurpleBuddyIcon *icon;
 	PurpleAccount *account;
 	gconstpointer buddy_icon_data;
 	gchar * buddy_icon_data_copy;
 	size_t buddy_icon_len;
+	const gchar *buddyname = NULL;
+	const gchar *proto_id = NULL;
+	const gchar *proto_username = NULL;
+	
+	buddyname = g_hash_table_lookup($_GET, "buddyname");
+	proto_id = g_hash_table_lookup($_GET, "proto_id");
+	proto_username = g_hash_table_lookup($_GET, "proto_username");
 	
 	account = purple_accounts_find(proto_username, proto_id);
 	if (account == NULL)

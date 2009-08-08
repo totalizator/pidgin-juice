@@ -59,12 +59,16 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	gchar *file_contents = NULL;
 	gsize file_length = 0;
 	gchar **pairs = NULL;
-	GHashTable *keyvals = NULL;
+	GHashTable *$_GET = NULL;
 	gchar **pair = NULL;
 	int i = 0;
 	GError *error = NULL;
+	gboolean return_code = FALSE;
 		
-	keyvals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
+		
+	//Setup a php-like $_GET array (hash table)
+	$_GET = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	pairs = g_strsplit(query->str, "&", -1);
 	for (i=0; pairs[i]; i++)
 	{
@@ -72,113 +76,126 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 		if (pair[0] != NULL)
 		{
 			purple_debug_info("pidgin_juice", "Adding %s, %s to hash table.\n", pair[0], pair[1]);
-			g_hash_table_insert(keyvals, g_strdup(pair[0]), g_strdup(pair[1]?pair[1]:""));
+			g_hash_table_insert($_GET, g_strdup(pair[0]), g_strdup(pair[1]?pair[1]:""));
 		}
 		g_strfreev(pair);
 	}
 	g_strfreev(pairs);
-	//g_hash_table_destroy(keyvals);
 	
-	
-	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
+	//Check for the appropriate path, or catch all to serve
 	if (g_str_equal(path->str, "/send_im.js"))
 	{
-		
-		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup(keyvals, "buddyname"), 
-										  (gchar *)g_hash_table_lookup(keyvals, "proto_id"), 
-										  (gchar *)g_hash_table_lookup(keyvals, "proto_username"),
-										  (gchar *)g_hash_table_lookup(keyvals, "message"), 
+		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup($_GET, "buddyname"), 
+										  (gchar *)g_hash_table_lookup($_GET, "proto_id"), 
+										  (gchar *)g_hash_table_lookup($_GET, "proto_username"),
+										  (gchar *)g_hash_table_lookup($_GET, "message"), 
 										  resource_out_length);
-		if (*resource_out)
-			return TRUE;
-		return FALSE;
-	} else
-	if (g_str_equal(path->str, "/send_typing.js"))
+		return_code = TRUE;
+	}
+	else if (g_str_equal(path->str, "/send_typing.js"))
 	{
-		if (g_str_equal(g_hash_table_lookup(keyvals, "typing"), "1"))
+		if (g_str_equal(g_hash_table_lookup($_GET, "typing"), "1"))
 		{
-			*resource_out = juice_POST_typing((gchar *)g_hash_table_lookup(keyvals, "buddyname"), 
-											  (gchar *)g_hash_table_lookup(keyvals, "proto_id"), 
-											  (gchar *)g_hash_table_lookup(keyvals, "proto_username"), 
+			*resource_out = juice_POST_typing((gchar *)g_hash_table_lookup($_GET, "buddyname"), 
+											  (gchar *)g_hash_table_lookup($_GET, "proto_id"), 
+											  (gchar *)g_hash_table_lookup($_GET, "proto_username"), 
 											  resource_out_length);
 		} else {
-			*resource_out = juice_POST_nottyping((gchar *)g_hash_table_lookup(keyvals, "buddyname"), 
-												 (gchar *)g_hash_table_lookup(keyvals, "proto_id"), 
-												 (gchar *)g_hash_table_lookup(keyvals, "proto_username"), 
+			*resource_out = juice_POST_nottyping((gchar *)g_hash_table_lookup($_GET, "buddyname"), 
+												 (gchar *)g_hash_table_lookup($_GET, "proto_id"), 
+												 (gchar *)g_hash_table_lookup($_GET, "proto_username"), 
 												 resource_out_length);
 		}
-		if (*resource_out)
-			return TRUE;
-		return FALSE;
-	} else
-	if (g_str_equal(path->str, "/buddy_icon.png"))
+		return_code = TRUE;
+	}
+	else if (g_str_equal(path->str, "/buddy_icon.png"))
 	{
 		//Temporary assignments for debugging purposes only. The memory is already allocated and will continue to be used.
-		file_contents = (gchar *)g_hash_table_lookup(keyvals, "buddyname");
-		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_id");
-		file_contents = (gchar *)g_hash_table_lookup(keyvals, "proto_username");
+		file_contents = (gchar *)g_hash_table_lookup($_GET, "buddyname");
+		file_contents = (gchar *)g_hash_table_lookup($_GET, "proto_id");
+		file_contents = (gchar *)g_hash_table_lookup($_GET, "proto_username");
 		
 		*resource_out = NULL;
 		*resource_out_length = 0;
 		
 		//I need the length from this also, as it is binary data, not string safe
-		file_contents = juice_GET_buddyicon((gchar *)g_hash_table_lookup(keyvals, "buddyname"), (gchar *)g_hash_table_lookup(keyvals, "proto_id"), (gchar *)g_hash_table_lookup(keyvals, "proto_username"), &file_length);
+		//file_contents = juice_GET_buddyicon((gchar *)g_hash_table_lookup($_GET, "buddyname"),
+		//									(gchar *)g_hash_table_lookup($_GET, "proto_id"),
+		//									(gchar *)g_hash_table_lookup($_GET, "proto_username"),
+		//										&file_length);
+		file_contents = juice_GET_buddyicon($_GET, &file_length);
 		//purple_debug_info("purple_juice", "buddy_icon_data address3: %s \n", file_contents);
 		if (file_contents == NULL)
-			return FALSE;
+		{
+			return_code = FALSE;
+		}
+		else
+		{
+			purple_debug_info("pidgin_juice", "buddy icon data file contents: %d\n", file_length);
+			//purple_debug_info("pidgin_juice", "buddy icon data file contents: %s\n", file_contents);
 			
-		purple_debug_info("pidgin_juice", "buddy icon data file contents: %d\n", file_length);
-		//purple_debug_info("pidgin_juice", "buddy icon data file contents: %s\n", file_contents);
-		
-		*resource_out = file_contents;
-		*resource_out_length = file_length;
-		
-		//don't free this, the above assignment means it's still being used
-		//g_free(file_contents);
-		return TRUE;
-	} else
-	if (strcmp(path->str, "/buddies_list.js") ==0)
+			*resource_out = file_contents;
+			*resource_out_length = file_length;
+			
+			//don't free this, the above assignment means it's still being used
+			//g_free(file_contents);
+			return_code = TRUE;
+		}
+	}
+	else if (strcmp(path->str, "/buddies_list.js") ==0)
 	{
-		json_string = juice_GET_buddylist();
+		json_string = juice_GET_buddylist($_GET);
 		*resource_out = json_string;
 		*resource_out_length = strlen(json_string);
-		return TRUE;
-	} else
-	if (strncmp(path->str, "/", 1) == 0)
+		return_code = TRUE;
+	}
+	else if (strncmp(path->str, "/", 1) == 0)
 	{
+		purple_debug_info("pidgin_juice", "Serving physical file\n");
 		filename = g_string_new(NULL);
 		g_string_append_printf(filename, "%s%s%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "juice", G_DIR_SEPARATOR_S, path->str+1);
 		purple_debug_info("pidgin_juice", "filename: %s\n", filename->str);
 		
 		file_channel = g_io_channel_new_file(filename->str, "r", NULL);
 		if (file_channel == NULL)
-			return FALSE;
-		
-		g_io_channel_set_encoding(file_channel, NULL, &error);
-		if (error)
-			purple_debug_info("pidgin_juice", "error: %s\n", error->message);
+		{
+			return_code = FALSE;
+		}
+		else
+		{
+			g_io_channel_set_encoding(file_channel, NULL, &error);
+			if (error)
+				purple_debug_info("pidgin_juice", "error: %s\n", error->message);
+				
+			*resource_out = NULL; *resource_out_length = 0;
 			
-		*resource_out = NULL; *resource_out_length = 0;
-		
-		//g_io_channel_read_to_end(file_channel, &file_contents, &file_length, &error);
-		g_file_get_contents(filename->str, &file_contents, &file_length, &error);
-		purple_debug_info("pidgin_juice", "file length: %d\n", file_length);
-		if (error)
-			purple_debug_info("pidgin_juice", "error: %s\n", error->message);
-		
-		*resource_out_length = file_length;
-		*resource_out = file_contents;
-		
-		
-		//don't free these, the above are still using the memory!
-		//g_free(file_contents);
-		//g_free(file_length);
-		
-		g_io_channel_shutdown(file_channel, TRUE, NULL);
-		g_string_free(filename, TRUE);
-		return TRUE;
+			//g_io_channel_read_to_end(file_channel, &file_contents, &file_length, &error);
+			g_file_get_contents(filename->str, &file_contents, &file_length, &error);
+			purple_debug_info("pidgin_juice", "file length: %d\n", file_length);
+			if (error)
+				purple_debug_info("pidgin_juice", "error: %s\n", error->message);
+			
+			*resource_out_length = file_length;
+			*resource_out = file_contents;
+			
+			//don't free these, the above are still using the memory!
+			//g_free(file_contents);
+			//g_free(file_length);
+			
+			return_code = TRUE;
+		}
 	}
-	return FALSE;
+	purple_debug_info("pidgin_juice", "Return code: %d\n", return_code);
+	if (*resource_out == NULL)
+		return_code = FALSE;
+	purple_debug_info("pidgin_juice", "Return code: %d\n", return_code);
+	return_code = TRUE;
+	
+	g_io_channel_shutdown(file_channel, TRUE, NULL);
+	g_string_free(filename, TRUE);
+	g_hash_table_destroy($_GET);
+	
+	return return_code;
 }
 
 static gboolean
