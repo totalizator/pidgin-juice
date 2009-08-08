@@ -80,7 +80,7 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 		json_object_add_member(json_message, "sender", sender_node);
 		
 		message_node = json_node_new(JSON_NODE_VALUE);
-		escaped = g_strescape(purple_conversation_message_get_message(msg));
+		escaped = g_strescape(purple_conversation_message_get_message(msg), "");
 		json_node_set_string(message_node, escaped);
 		g_free(escaped);
 		json_object_add_member(json_message, "message", message_node);
@@ -106,19 +106,19 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 	
 	//gchar *buddyname, gchar *proto_id, gchar *proto_username
 	buddyname_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(buddyname);
+	escaped = g_strescape(buddyname, "");
 	json_node_set_string(buddyname_node, escaped);
 	g_free(escaped);
 	json_object_add_member(return_history, "buddyname", buddyname_node);
 	
 	proto_id_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(proto_id);
+	escaped = g_strescape(proto_id, "");
 	json_node_set_string(proto_id_node, escaped);
 	g_free(escaped);
 	json_object_add_member(return_history, "proto_id", proto_id_node);
 	
 	proto_username_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(proto_username);
+	escaped = g_strescape(proto_username, "");
 	json_node_set_string(proto_username_node, escaped);
 	g_free(escaped);
 	json_object_add_member(return_history, "proto_username", proto_username_node);
