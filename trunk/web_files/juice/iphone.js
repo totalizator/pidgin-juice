@@ -1,3 +1,13 @@
+function alert_buddy(buddy) {
+	s = "";
+	s = s + "\nusername: " + buddy.username;
+	s = s + "\nproto_id: " + buddy.proto_id;
+	s = s + "\naccount_username: " + buddy.account_username;
+	s = s + "\n\nAlternative properties sometimes used:";
+	s = s + "\nbuddyname: " + buddy.buddyname;
+	s = s + "\nproto_username: " + buddy.proto_username;
+	alert(s);
+}
 function getStyle(el, prop) {
   if (document.defaultView && document.defaultView.getComputedStyle) {
     return document.defaultView.getComputedStyle(el, null)[prop];
@@ -7,12 +17,49 @@ function getStyle(el, prop) {
     return el.style[prop];
   }
 }
+var chats = [];
 function show_chat(buddy) {
 	var chat = document.getElementById('chat');
+	var chats = document.getElementById('chats');
+	
+	//chats.getElementsByTagName('ul')[0].appendChild(buddy.li);
+
 	chat.buddy = buddy;
 	chat.getElementsByTagName('h1')[0].innerHTML = buddy.display_name;
+	
+	if (buddy.is_chat_updated == undefined || !buddy.is_chat_updated)
+		get_buddy_history(buddy);
+	
 	//show chat history
 	change_page('chat');
+}
+function get_buddy_history(buddy) {
+	url = '/history.js?buddyname='+buddy.username+'&proto_id='+buddy.proto_id+'&proto_username='+buddy.account_username;
+	ajax_get(url, update_buddy_history);
+}
+function update_buddy_history(response) {
+	//eval("var json = " + response);
+	var json = eval("(" + response + ")");
+	alert(response);
+	buddy = get_buddy_from_collection(json.buddyname, json.proto_id, json.proto_username);
+	//testing
+	buddy.history_test = "test";
+	buddy.history = json.history;
+	buddy.history_string = response;
+	update_chat_with_history();
+}
+function update_chat_with_history() {
+	var chat = document.getElementById('chat');
+	var ul = chat.getElementsByTagName('ul')[0];
+	var earliest_message = ul.childNodes.length ? ul.childNodes[0] : false;
+	for(i=chat.buddy.history.length-1; i>=0; i--) {
+		li = document.createElement('LI');
+		li.innerHTML = chat.buddy.history[i].message;
+		if (earliest_message)
+			ul.insertBefore(li, earliest_message);
+		else
+			ul.appendChild(li);
+	}
 }
 function show_contact(buddy) {
 	var contact = document.getElementById('contact');
@@ -59,39 +106,27 @@ var update_buddies_timeout = false;
 function update_buddies(buddies) {
 	clearTimeout(update_buddies_timeout);
 	
-	eval("var json="+buddies+";");
+	//eval("var json="+buddies+";");
+	var json = eval("(" + buddies + ")");
 	var buddies = json.buddies;
 	
 	buddies.sort(buddy_sort_callback);
 	
 	time_updated = new Date().getTime();
 	
-	var buddylist = document.getElementById('contacts').getElementsByTagName('UL')[0];
+	var lis = document.getElementById('contacts').getElementsByTagName('UL');
+	var buddylist = lis[lis.length-1];
 	for (var i=0; i<buddies.length; i++)
 	{
 		buddy = buddies[i];
-		if(buddylist[buddy.username] == undefined)
+		existing_buddy=get_buddy_from_collection(buddy.username, buddy.proto_id, buddy.account_username);
+		if (!existing_buddy)
 		{
-			buddylist[buddy.username] = [];
-		}
-		//if it already exists in the list
-		found = false;
-		for(j=0; j<buddylist[buddy.username].length; j++)
-		{
-			if(buddylist[buddy.username][j].proto_id == buddy.proto_id
-			  && buddylist[buddy.username][j].account_username == buddy.account_username)
-			{
-				found=buddylist[buddy.username][j];
-				break;
-			}
-		}
-		if (!found)
-		{
-			found = buddy = create_buddy(buddy);
-			buddylist[buddy.username].push(buddy);
+			existing_buddy = buddy = create_buddy(buddy);
+			add_buddy_to_collection(buddy);
 			buddylist.appendChild(buddy.li);
 		}
-		update_buddy(found, buddy);
+		update_buddy(existing_buddy,buddy);
 		buddy.time_updated = time_updated;
 		
 	}
@@ -115,13 +150,14 @@ function update_buddies(buddies) {
 			}
 		}
 		*/
-	buddies_update_timeout = setTimeout(get_buddies, 2000);
+	//buddies_update_timeout = setTimeout(get_buddies, 10000);
 }
 function create_buddy(buddy) {
 	a = document.createElement('A');
 	a.href="#";
 	a.innerHTML = buddy.display_name;
 	a.onclick = function() {show_contact(buddy); return false;};
+	a.onclick = function() {show_chat(buddy); return false;};
 	li = document.createElement('LI');
 	li.appendChild(a);
 	li.a=a;
@@ -138,6 +174,46 @@ function update_buddy(buddy_old, buddy_new) {
 		li.a.className = 'away';
 		li.a.innerHTML += " (away)";
 	}
+}
+var buddies_collection = {};
+function add_buddy_to_collection(buddy) {
+	buddies_collection[buddy.username].push(buddy);
+}
+function remove_buddy_from_collection(buddy) {
+	if (buddies_collection[buddy.username] == undefined)
+		return false;
+	for(j=0; j<buddies_collection[buddy.username]; j++) {
+		if(buddies_collection[buddy.username][j].proto_id == buddy.proto_id
+			&& buddies_collection[buddy.username][j].account_username == buddy.account_username) {
+			buddies_collection[buddy.username].splice(j, 1);
+			return true;
+		}
+	}
+	return false;
+}
+function get_buddy_from_collection(username, proto_id, account_username) {
+	//if it's an object, find a similar one in the collection
+	if(username.username != undefined) {
+		account_username = username.account_username;
+		proto_id = username.proto_id;
+		username = username.username;
+	}
+	if(buddies_collection[username] == undefined)
+	{
+		buddies_collection[username] = [];
+	}
+	//if it already exists in the list
+	existing_buddy = false;
+	for(j=0; j<buddies_collection[username].length; j++)
+	{
+		if(buddies_collection[username][j].proto_id == proto_id
+		  && buddies_collection[username][j].account_username == account_username)
+		{
+			existing_buddy=buddies_collection[username][j];
+			break;
+		}
+	}
+	return existing_buddy;
 }
 function get_buddies() {
 	ajax_get("buddies_list.js", update_buddies);
@@ -165,7 +241,9 @@ function ajax_get(page, func)
 	{
 		if(req.readyState == 4)
 		{
-			func(req.responseText);
+			if(req.status == 200 && req.responseText) {
+				func(req.responseText);
+			}
 		}
 	};
 	if (!page)
