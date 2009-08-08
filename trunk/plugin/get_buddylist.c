@@ -11,7 +11,7 @@
 #include <json-glib/json-glib.h>
 
 static gchar *
-juice_GET_buddylist(/* something in here? */)
+juice_GET_buddylist(const GHashTable *$_GET)
 {
 	gchar *output;
 	PurpleBuddy *buddy;
