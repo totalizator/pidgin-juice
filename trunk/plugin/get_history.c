@@ -132,6 +132,9 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 	output = json_generator_to_data(generator, NULL);
 	if (length != NULL)
 		*length = strlen(output);
+	
+	json_node_free(return_history_node);
+	
 	return output;
 	
 }
