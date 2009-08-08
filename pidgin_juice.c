@@ -245,9 +245,9 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	if (!get_resource(path, query, &resource, &resource_length))
 	{
 		purple_debug_info("pidgin_juice", "Could not find resource.\n");
-		g_string_append(reply_string, "HTTP/1.1 404 Not Found\n");
-		g_string_append(reply_string, "Content-length: 0\n");
-		g_string_append(reply_string, "\n");
+		g_string_append(reply_string, "HTTP/1.0 404 Not Found\r\n");
+		g_string_append(reply_string, "Content-length: 0\r\n");
+		g_string_append(reply_string, "\r\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
 		return FALSE;
 	}
@@ -256,7 +256,7 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	/* end response */
 	
 	reply_string = g_string_new(NULL);
-	g_string_append(reply_string, "HTTP/1.1 200 OK\r\n");
+	g_string_append(reply_string, "HTTP/1.0 200 OK\r\n");
 	/* set appropriate mime type */
 	if (g_strrstr(path->str, ".png") != NULL && strlen(g_strrstr(path->str, ".png")) == 4)
 		g_string_append(reply_string, "Content-type: image/png\r\n");
@@ -270,7 +270,7 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	//g_string_append(reply_string, resource);
 
 	*reply_out_length = resource_length + strlen(reply_string->str);	
-	*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (1 + *reply_out_length));
+	*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (*reply_out_length));
 	
 	memcpy(*reply_out, reply_string->str, strlen(reply_string->str)+1);
 	memcpy((*reply_out)+strlen(reply_string->str), resource, resource_length);
@@ -295,18 +295,29 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	GIOStatus ret;
 	GError *err = NULL;
 	gsize len = 0;
+	gchar *c = NULL;
 
 	if (condition & G_IO_HUP)
 		purple_debug_error("pidgin_juice", "Write end of pipe died!\n");
 
-	g_io_channel_flush(gio, NULL);
 	purple_debug_info("pidgin_juice", "data_length: %d\n", data_length);
 	g_io_channel_set_encoding(gio, NULL, NULL);
-	ret = g_io_channel_write_chars (gio, data, data_length, &len, &err);
+	g_io_channel_set_buffered(gio, FALSE);
+	g_io_channel_set_flags(gio, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_flush(gio, NULL);
 	
+	c = data+(data_length-10);
+	purple_debug_info("pidgin_juice", "Chars: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", *(c+0), (*(c+1)), (*(c+2)), (*(c+3)), (*(c+4)), (*(c+5)), (*(c+6)), (*(c+7)), (*(c+8)), (*(c+9)));
+	for(len=0; len<10; len++) {
+		
+	}
+	
+	ret = g_io_channel_write_chars (gio, data, data_length, &len, &err);
 	//DONT REMOVE THIS DEBUG.
 	//for some magical mystical reason it is the only thing ensuring the end of the buddy icon is sent
-	purple_debug_info("pidgin_juice", "wrote %d bytes\nError: %d; %d; %d; %d\n", len, ret==G_IO_STATUS_ERROR, ret==G_IO_STATUS_NORMAL, ret==G_IO_STATUS_EOF, ret==G_IO_STATUS_AGAIN);
+	purple_debug_info("pidgin_juice", "wrote %d bytes\nError: %d; %d; %d; %d;\n", len, ret==G_IO_STATUS_ERROR, ret==G_IO_STATUS_NORMAL, ret==G_IO_STATUS_EOF, ret==G_IO_STATUS_AGAIN);
+	if (err != NULL)
+		purple_debug_info("pidgin_juice", "Error: %s\n", err->message);
 	
 	if (ret == G_IO_STATUS_ERROR)
 		purple_debug_error("pidgin_juice", "Error writing: (%u) %s\n", err->code, err->message);
