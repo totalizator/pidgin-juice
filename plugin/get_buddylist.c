@@ -149,5 +149,7 @@ juice_GET_buddylist(const GHashTable *$_GET)
 	
 	output = json_generator_to_data(generator, NULL);
 	
+	json_node_free(return_blist_node);
+	
 	return output;
 }
