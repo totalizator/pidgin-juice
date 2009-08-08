@@ -74,7 +74,7 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 		json_message = json_object_new();
 		
 		sender_node = json_node_new(JSON_NODE_VALUE);
-		escaped = g_strescape(purple_conversation_message_get_sender(msg));
+		escaped = g_strescape(purple_conversation_message_get_sender(msg), "");
 		json_node_set_string(sender_node, escaped);
 		g_free(escaped);
 		json_object_add_member(json_message, "sender", sender_node);
