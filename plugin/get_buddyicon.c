@@ -14,7 +14,8 @@ juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gs
 {
 	PurpleBuddyIcon *icon;
 	PurpleAccount *account;
-	gchar *buddy_icon_data;
+	gconstpointer buddy_icon_data;
+	gchar * buddy_icon_data_copy;
 	size_t buddy_icon_len;
 	
 	account = purple_accounts_find(proto_username, proto_id);
@@ -31,7 +32,7 @@ juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gs
 	//purple_debug_info("purple_juice", "buddy_icon_data address: %d \n", buddy_icon_data);
 	
 	
-	buddy_icon_data = g_memdup(buddy_icon_data, buddy_icon_len);
+	buddy_icon_data_copy = (gchar *)g_memdup(buddy_icon_data, buddy_icon_len);
 	
 	
 	//purple_debug_info("purple_juice", "buddy_icon_data address2: %d \n", buddy_icon_data);
@@ -40,5 +41,5 @@ juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gs
 	//purple_debug_info("purple_juice", "buddy_icon_data address3: %d \n", buddy_icon_data);
 	
 	*length = buddy_icon_len;
-	return buddy_icon_data;
+	return buddy_icon_data_copy;
 }
