@@ -25,6 +25,7 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 	JsonNode *buddyname_node, *proto_id_node, *proto_username_node;
 	gchar *output;
 	JsonGenerator *generator;
+	gchar *escaped;
 	
 	if (proto_username && proto_id)
 	{
@@ -44,7 +45,6 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 	
 	history = purple_conversation_get_message_history(conv);
 	
-	
 	return_history = json_object_new();
 	json_messages = json_array_new();
 	
@@ -62,17 +62,19 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 		json_message = json_object_new();
 		
 		sender_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(sender_node, 
-							purple_conversation_message_get_sender(msg));
+		escaped = g_strescape(purple_conversation_message_get_sender(msg));
+		json_node_set_string(sender_node, escaped);
+		g_free(escaped);
 		json_object_add_member(json_message, "sender", sender_node);
 		
 		message_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(message_node, 
-							 purple_conversation_message_get_message(msg));
+		escaped = g_strescape(purple_conversation_message_get_message(msg));
+		json_node_set_string(message_node, escaped);
+		g_free(escaped);
 		json_object_add_member(json_message, "message", message_node);
 		
 		type_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(sender_node,
+		json_node_set_string(type_node,
 							 (flags & PURPLE_MESSAGE_SEND?"sent":"received"));
 		json_object_add_member(json_message, "type", type_node);
 		
@@ -82,7 +84,7 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 		json_object_add_member(json_message, "timestamp", timestamp_node);
 		
 		json_message_node = json_node_new(JSON_NODE_OBJECT);
-		json_node_set_object(json_message_node, json_message);
+		json_node_take_object(json_message_node, json_message);
 		json_array_add_element(json_messages, json_message_node);
 	}
 	
@@ -92,15 +94,21 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 	
 	//gchar *buddyname, gchar *proto_id, gchar *proto_username
 	buddyname_node = json_node_new(JSON_NODE_VALUE);
-	json_node_set_string(buddyname_node, buddyname);
+	escaped = g_strescape(buddyname);
+	json_node_set_string(buddyname_node, escaped);
+	g_free(escaped);
 	json_object_add_member(return_history, "buddyname", buddyname_node);
 	
 	proto_id_node = json_node_new(JSON_NODE_VALUE);
-	json_node_set_string(proto_id_node, proto_id);
+	escaped = g_strescape(proto_id);
+	json_node_set_string(proto_id_node, escaped);
+	g_free(escaped);
 	json_object_add_member(return_history, "proto_id", proto_id_node);
 	
 	proto_username_node = json_node_new(JSON_NODE_VALUE);
-	json_node_set_string(proto_username_node, proto_username);
+	escaped = g_strescape(proto_username);
+	json_node_set_string(proto_username_node, escaped);
+	g_free(escaped);
 	json_object_add_member(return_history, "proto_username", proto_username_node);
 	
 	return_history_node = json_node_new(JSON_NODE_OBJECT);
