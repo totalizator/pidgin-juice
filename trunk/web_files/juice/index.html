@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Pidgin Juice</title>
+<meta name="viewport" content="width=320; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;"/>
+<style type="text/css" media="screen">@import "iphone.css";</style>
+<script type="text/javascript" src="iphone.js"></script>
+</head>
+
+<body>
+		<div id="contacts" selected="true">
+			<h1>Contacts</h1>
+			<a class="button" href="#" onclick="setTimeout(get_buddies, 300);">Refresh</a>
+			<ul>
+			</ul>
+		</div>
+		
+		<div id="contact">
+			<h1>Contact</h1>
+			<a class="button homeButton" href="#" onclick="change_page('contacts', -1);">Contacts</a>
+			<img style="" src="" />
+			<a href="#" class="button_grey" onclick="show_chat(this.parentNode.buddy);">Chat</a>
+		</div>
+		
+		<div id="chats">
+			<h1>Chats</h1>
+			<a class="button homeButton" href="#" onclick="change_page('contacts', 0);">Contacts</a>
+			<ul>
+			</ul>
+		</div>
+		
+		<div id="chat">
+			<h1>Chat</h1>
+			<a class="button" href="#" onclick="alert("can't close chats yet");">Close</a>
+			<a class="button homeButton" href="#" onclick="change_page('chats', -1);">Chats</a>
+			<ul>
+			</ul>
+		</div>
+		
+		<div id="other">
+			other
+		</div>
+</body>
+</html>
