@@ -55,12 +55,12 @@ body > div > h1 {
 body > div > div,
 body > div > form,
 body > div > ul {
-    position: absolute;
+    //position: absolute;
     left: 0;
     width: 100%;
-    min-height: 418px;
     margin: 0;
     padding: 0;
+    height: 100%;
 }
 
 body > div {
@@ -97,6 +97,24 @@ body > div > ul > li > a.away {
     box-sizing: border-box;
     padding: 10px;
     background: #c8c8c8 url(pinstripes.png);
+}
+
+#chat > div {
+	bottom: 0;
+	height: 65px;
+	width: 220px;
+	background: transparent url(/background_send_bar_full.png) no-repeat top center;
+	margin: 0 auto;
+	padding-top: 15px;
+	padding-right: 85px;
+	padding-bottom: 15px;
+	padding-left: 15px;
+}
+
+#chat > div > #send_bar {
+	display: block;
+	height: 100%;
+	margin: 0;
 }
 
 /************************************************************************************************/
