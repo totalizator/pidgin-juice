@@ -83,7 +83,13 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	g_strfreev(pairs);
 	
 	//Check for the appropriate path, or catch all to serve
-	if (g_str_equal(path->str, "/send_im.js"))
+	if (g_str_equal(path->str, "/history.js"))
+	{
+		*resource_out = juice_GET_history($_GET, &file_length);
+		*resource_out_length = file_length;
+		return_code = TRUE;
+	}
+	else if (g_str_equal(path->str, "/send_im.js"))
 	{
 		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup($_GET, "buddyname"), 
 										  (gchar *)g_hash_table_lookup($_GET, "proto_id"), 
@@ -185,11 +191,12 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 			return_code = TRUE;
 		}
 	}
-	purple_debug_info("pidgin_juice", "Return code: %d\n", return_code);
 	if (*resource_out == NULL)
+	{
+		*resource_out_length = 0;
 		return_code = FALSE;
+	}
 	purple_debug_info("pidgin_juice", "Return code: %d\n", return_code);
-	return_code = TRUE;
 	
 	g_io_channel_shutdown(file_channel, TRUE, NULL);
 	g_string_free(filename, TRUE);
@@ -212,28 +219,40 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	purple_debug_info("pidgin_juice", "Parsing request\n");
 	if (request_string->len <= 4 || strncmp(request_string->str, "GET ", 4) != 0)
 	{
+		reply_string = g_string_new(NULL);
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
 		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		*reply_out = reply_string->str;
+		*reply_out_length = reply_string->len;
+		g_string_free(reply_string, FALSE);
 		return FALSE;
 	}
 	
 	temp_substr = strstr(request_string->str, " HTTP/1.1");
 	if (temp_substr == NULL) {
+		reply_string = g_string_new(NULL);
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
 		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		*reply_out = reply_string->str;
+		*reply_out_length = reply_string->len;
+		g_string_free(reply_string, FALSE);
 		return FALSE;
 	}
 	
 	position = strlen(request_string->str) - strlen(temp_substr);
 	if (position < 0) {
+		reply_string = g_string_new(NULL);
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
 		g_string_append(reply_string, "Content-length: 0\n");
 		g_string_append(reply_string, "\n");
 		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		*reply_out = reply_string->str;
+		*reply_out_length = reply_string->len;
+		g_string_free(reply_string, FALSE);
 		return FALSE;
 	}
 	
@@ -261,11 +280,15 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	/* begin creating response */
 	if (!get_resource(path, query, &resource, &resource_length))
 	{
+		reply_string = g_string_new(NULL);
 		purple_debug_info("pidgin_juice", "Could not find resource.\n");
 		g_string_append(reply_string, "HTTP/1.0 404 Not Found\r\n");
 		g_string_append(reply_string, "Content-length: 0\r\n");
 		g_string_append(reply_string, "\r\n");
-		purple_debug_info("pidgin_juice", "Bad request. Ignoring.\n");
+		purple_debug_info("pidgin_juice", "Not Found.\n");
+		*reply_out = reply_string->str;
+		*reply_out_length = reply_string->len;
+		g_string_free(reply_string, FALSE);
 		return FALSE;
 	}
 	*reply_out = g_strdup(""); *reply_out_length = 0;
