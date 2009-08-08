@@ -9,10 +9,11 @@
 
 
 static gchar *
-juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
+//juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
+juice_GET_history(GHashTable *$_GET, gsize *length)
 {
 	PurpleAccount *account = NULL;
-	PurpleConversation *conv;
+	PurpleConversation *conv = NULL;
 	GList *history, *cur;
 	PurpleConvMessage *msg;
 	JsonObject *return_history;
@@ -25,7 +26,14 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 	JsonNode *buddyname_node, *proto_id_node, *proto_username_node;
 	gchar *output;
 	JsonGenerator *generator;
+	const gchar *buddyname = NULL;
+	const gchar *proto_id = NULL;
+	const gchar *proto_username = NULL;
 	gchar *escaped;
+	
+	buddyname = (gchar *)g_hash_table_lookup($_GET, "buddyname");
+	proto_id = (gchar *)g_hash_table_lookup($_GET, "proto_id");
+	proto_username = (gchar *)g_hash_table_lookup($_GET, "proto_username");
 	
 	if (proto_username && proto_id)
 	{
@@ -55,6 +63,10 @@ juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsiz
 		flags = purple_conversation_message_get_flags(msg);
 		if (flags & PURPLE_MESSAGE_SEND ||
 			flags & PURPLE_MESSAGE_RECV)
+		{
+			//continue;
+		}
+		else
 		{
 			continue;
 		}
