@@ -29,6 +29,8 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *name, gpointer user_
 }
 
 struct _ConnectedSignals {
+	guint disconnect_timer;
+	
 	gulong received_im_signal;
 	gulong buddy_typing_signal;
 	gulong buddy_typing_stoppped_signal;
@@ -54,10 +56,25 @@ connect_to_signals()
 						  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_stopped_cb), NULL);
 
 	//add a timeout here to disconnect
+	if (ConnectedSignals->disconnect_timer)
+		purple_timeout_remove(ConnectedSignals->disconnect_timer);
+	
+	ConnectedSignals->disconnect_timer = purple_timeout_add_seconds(180, 
+									disconnect_signals_cb, ConnectedSignals);
+}
+
+static void
+disconnect_signals()
+{
+	if (ConnectedSignals->disconnect_timer)
+		purple_timeout_remove(ConnectedSignals->disconnect_timer);
+	
+	ConnectedSignals->disconnect_timer = purple_timeout_add_seconds(60, 
+																	disconnect_signals_cb, ConnectedSignals);
 }
 
 static gboolean
-disconnect_signals()
+disconnect_signals_cb(gpointer data)
 {
 	purple_signal_disconnect_by_handle(ConnectedSignals);
 	g_free(ConnectedSignals);
@@ -70,5 +87,9 @@ static void
 juice_GET_events(gsize *length)
 {
 	//this funciton should block until there's an event, or until a minute is up
+	connect_to_signals();
 	
+	//block here
+	
+	disconnect_signals();
 }
