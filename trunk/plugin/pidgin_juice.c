@@ -53,7 +53,7 @@
 static GHashTable
 *parse_query(const gchar *query) {
 	GHashTable *$_GET = NULL;
-	gchar** pairs, **pair;
+	gchar** pairs, *pair[2], **url_encoded_pair;
 	int i = 0;
 	
 	//Setup a php-like $_GET array (hash table)
@@ -61,13 +61,19 @@ static GHashTable
 	pairs = g_strsplit(query, "&", -1);
 	for (i=0; pairs[i]; i++)
 	{
-		pair = g_strsplit(pairs[i], "=", 2);
-		if (pair[0] != NULL)
+		url_encoded_pair = g_strsplit(pairs[i], "=", 2);
+		if (url_encoded_pair[0] != NULL)
 		{
+			pair[0] = g_strdup(purple_url_decode(url_encoded_pair[0]));
+			if (url_encoded_pair[1] != NULL)
+				pair[1] = g_strdup(purple_url_decode(url_encoded_pair[1]));
+			else
+				pair[1] = g_strdup("");
+			
 			purple_debug_info("pidgin_juice", "Adding %s, %s to hash table.\n", pair[0], pair[1]);
-			g_hash_table_insert($_GET, g_strdup(pair[0]), g_strdup(pair[1]?pair[1]:""));
+			g_hash_table_insert($_GET, pair[0], pair[1]);
 		}
-		g_strfreev(pair);
+		g_strfreev(url_encoded_pair);
 	}
 	g_strfreev(pairs);
 	
