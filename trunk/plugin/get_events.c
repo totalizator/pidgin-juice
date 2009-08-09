@@ -7,6 +7,15 @@
  *
  */
 
+
+#ifndef G_QUEUE_INIT
+#define G_QUEUE_INIT { NULL, NULL, 0 }
+#endif
+
+static GQueue queue = G_QUEUE_INIT;
+static GHashTable *channels = NULL; 
+static guint current_seq = 0;
+
 static void
 received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 				   PurpleConversation *conv, PurpleMessageFlags flags,
@@ -17,6 +26,8 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 	JsonNode *json_message_node;
 	JsonNode *sender_node, *message_node, *timestamp_node, *type_node;
 	JsonNode *proto_id_node, *proto_username_node;
+	gchar *escaped = NULL;
+	JsonGenerator *generator = NULL;
 	
 	json_message = json_object_new();
 	
@@ -63,28 +74,22 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 	output = json_generator_to_data(generator, NULL);	
 	json_node_free(json_message_node);	
 	
-	g_queue_push_tail(&message_queue, output);
+	g_queue_push_tail(&queue, output);
 }
 
 static void
 buddy_typing_cb(PurpleAccount *account, const char *name, gpointer user_data)
 {
 	
-	g_queue_push_tail(&message_queue, g_strdup(""));
+	g_queue_push_tail(&queue, g_strdup("{}"));
 }
 static void 
 buddy_typing_stopped_cb(PurpleAccount *account, const char *name, gpointer user_data)
 {
 	
-	g_queue_push_tail(&message_queue, g_strdup(""));
+	g_queue_push_tail(&queue, g_strdup("{}"));
 }
 
-#ifndef G_QUEUE_INIT
-#define G_QUEUE_INIT { NULL, NULL, 0 }
-#endif
-
-static GQueue message_queue = G_QUEUE_INIT;
-static GHashTable *channels = NULL; 
 
 struct _ConnectedSignals {
 	guint disconnect_timer;
@@ -93,67 +98,14 @@ struct _ConnectedSignals {
 	gulong buddy_typing_signal;
 	gulong buddy_typing_stopped_signal;
 };
-static struct _ConnectedSignals ConnectedSignals = NULL;
-
-
-static void
-connect_to_signals()
-{
-    void *conv_handle = purple_conversations_get_handle();
-	
-	purple_debug_info("pidgin_juice", "Connecting signals\n");
-	
-	if (ConnectedSignals == NULL)
-		ConnectedSignals = g_new0(struct _ConnectedSignals, 1);
-	
-	if (!ConnectedSignals->received_im_signal)
-	{
-		ConnectedSignals->received_im_signal =
-			purple_signal_connect(conv_handle, "received-im-msg",
-								  ConnectedSignals, PURPLE_CALLBACK(received_im_msg_cb), 
-								  NULL);
-	}
-	if (!ConnectedSignals->buddy_typing_signal)
-	{
-		ConnectedSignals->buddy_typing_signal = 
-			purple_signal_connect(conv_handle, "buddy-typing",
-								  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_cb), 
-								  NULL);
-	}
-	if (!ConnectedSignals->buddy_typing_stopped_signal)
-	{
-		ConnectedSignals->buddy_typing_stopped_signal = 
-			purple_signal_connect(conv_handle, "buddy-typing-stopped",
-								  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_stopped_cb), 
-								  NULL);
-	}
-	
-	//add a timeout here to disconnect after 3 mins
-	if (ConnectedSignals->disconnect_timer)
-		purple_timeout_remove(ConnectedSignals->disconnect_timer);
-	
-	ConnectedSignals->disconnect_timer = purple_timeout_add_seconds(180, 
-																	disconnect_signals_cb, ConnectedSignals);
-}
-
-static void
-disconnect_signals()
-{
-	if (ConnectedSignals->disconnect_timer)
-		purple_timeout_remove(ConnectedSignals->disconnect_timer);
-	
-	ConnectedSignals->disconnect_timer = purple_timeout_add_seconds(60, 
-																	disconnect_signals_cb, ConnectedSignals);
-}
+static struct _ConnectedSignals ConnectedSignals = {0,0,0,0};
 
 static gboolean
 disconnect_signals_cb(gpointer data)
 {
 	purple_debug_info("pidgin_juice", "Disconnecting signals\n");
 	
-	purple_signal_disconnect_by_handle(ConnectedSignals);
-	g_free(ConnectedSignals);
-	ConnectedSignals = NULL;
+	purple_signals_disconnect_by_handle(&ConnectedSignals);
 	
 	while(g_queue_pop_head(&queue))
 	{
@@ -165,10 +117,57 @@ disconnect_signals_cb(gpointer data)
 	return FALSE; //return false so that the event doesn't get fired twice
 }
 
+static void
+connect_to_signals()
+{
+    void *conv_handle = purple_conversations_get_handle();
+	
+	purple_debug_info("pidgin_juice", "Connecting signals\n");
+	
+	if (!ConnectedSignals.received_im_signal)
+	{
+		ConnectedSignals.received_im_signal =
+			purple_signal_connect(conv_handle, "received-im-msg",
+								  &ConnectedSignals, PURPLE_CALLBACK(received_im_msg_cb), 
+								  NULL);
+	}
+	if (!ConnectedSignals.buddy_typing_signal)
+	{
+		ConnectedSignals.buddy_typing_signal = 
+			purple_signal_connect(conv_handle, "buddy-typing",
+								  &ConnectedSignals, PURPLE_CALLBACK(buddy_typing_cb), 
+								  NULL);
+	}
+	if (!ConnectedSignals.buddy_typing_stopped_signal)
+	{
+		ConnectedSignals.buddy_typing_stopped_signal = 
+			purple_signal_connect(conv_handle, "buddy-typing-stopped",
+								  &ConnectedSignals, PURPLE_CALLBACK(buddy_typing_stopped_cb), 
+								  NULL);
+	}
+	
+	//add a timeout here to disconnect after 3 mins
+	if (ConnectedSignals.disconnect_timer)
+		purple_timeout_remove(ConnectedSignals.disconnect_timer);
+	
+	ConnectedSignals.disconnect_timer = purple_timeout_add_seconds(180, 
+																	disconnect_signals_cb, &ConnectedSignals);
+}
+
+static void
+disconnect_signals()
+{
+	if (ConnectedSignals.disconnect_timer)
+		purple_timeout_remove(ConnectedSignals.disconnect_timer);
+	
+	ConnectedSignals.disconnect_timer = purple_timeout_add_seconds(60, 
+																	disconnect_signals_cb, &ConnectedSignals);
+}
+
 static gboolean
 write_to_client(GIOChannel *channel)
 {
-	GString returnstring = NULL;
+	GString *returnstring = NULL;
 	gchar *headers = NULL;
 	gchar *next_event;
 	gboolean first = TRUE;
@@ -184,12 +183,12 @@ write_to_client(GIOChannel *channel)
 	
 	returnstring = g_string_new("{ \"events\" : [ ");
 	
-	if (g_queue_is_empty())
+	if (g_queue_is_empty(&queue))
 	{
 		returnstring = g_string_append(returnstring, 
 									   "{ \"type\":\"continue\" }");
 	} else {
-		while (next_event = g_queue_pop_head(&queue))
+		while ((next_event = g_queue_pop_head(&queue)))
 		{
 			if (first)
 				first = FALSE;
@@ -206,8 +205,8 @@ write_to_client(GIOChannel *channel)
 					   "Content-type: application/json\r\n"
 					   "Content-length: %d\r\n\r\n", returnstring->len);
 	
-	write_data(channel, G_IO_OUT, headers, strlen(headers))
-	write_data(channel, G_IO_OUT, returnstring, returnstring->len + 1);
+	write_data(channel, G_IO_OUT, headers, strlen(headers));
+	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
 	
 	g_free(headers);
 	g_string_free(returnstring, TRUE);
@@ -218,8 +217,6 @@ write_to_client(GIOChannel *channel)
 	
 	return FALSE;
 }
-
-static guint current_seq = 0;
 
 static void
 juice_GET_events(GIOChannel *channel)
@@ -239,7 +236,7 @@ juice_GET_events(GIOChannel *channel)
 								  "Content-type: application/json\r\n"
 								  "Content-length: %d\r\n\r\n", strlen(body));
 		
-		write_data(channel, G_IO_OUT, headers, strlen(headers))
+		write_data(channel, G_IO_OUT, headers, strlen(headers));
 		write_data(channel, G_IO_OUT, body, strlen(body)+1);
 		
 		g_free(headers);
@@ -247,7 +244,7 @@ juice_GET_events(GIOChannel *channel)
 		return;
 	}
 	
-	if (!g_queue_is_empty())
+	if (!g_queue_is_empty(&queue))
 	{
 		write_to_client(channel);
 		return;
@@ -258,5 +255,5 @@ juice_GET_events(GIOChannel *channel)
 	
 	//Otherwise, store up the channel
 	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
-	g_hash_table_insert(channel, GINT_TO_POINTER(timeout));
+	g_hash_table_insert(channels, channel, GINT_TO_POINTER(timeout));
 }

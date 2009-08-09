@@ -45,10 +45,14 @@
 #include "pidgin.h"
 
 #include "winsock2.h"
+
+static gboolean write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length);
+
 #include "get_buddylist.c"
 #include "get_buddyicon.c"
 #include "get_history.c"
 #include "post_sendim.c"
+#include "get_events.c"
 
 static GHashTable
 *parse_query(const gchar *query) {
@@ -210,7 +214,7 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 }
 
 static gboolean
-process_request(GString *request_string, gchar **reply_out, gsize *reply_out_length)
+process_request(GString *request_string, GIOChannel *channel, gchar **reply_out, gsize *reply_out_length)
 {
 	GString *uri = NULL;
 	GString *path = NULL, *query = NULL;
@@ -288,51 +292,59 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	}
 	
 	/* begin creating response */
-	if (!get_resource(path, query, &resource, &resource_length))
+	if (g_str_equal(path->str, "/events.js"))
 	{
-		reply_string = g_string_new(NULL);
-		purple_debug_info("pidgin_juice", "Could not find resource.\n");
-		g_string_append(reply_string, "HTTP/1.0 404 Not Found\r\n");
-		g_string_append(reply_string, "Content-length: 0\r\n");
-		g_string_append(reply_string, "\r\n");
-		g_string_append(reply_string, "404 - Not Found\r\n");
-		purple_debug_info("pidgin_juice", "Not Found.\n");
-		*reply_out = reply_string->str;
-		*reply_out_length = reply_string->len;
-		g_string_free(reply_string, FALSE);
-		return FALSE;
+		*reply_out = g_strdup(""); *reply_out_length = 0;
+		juice_GET_events(channel);
 	}
-	*reply_out = g_strdup(""); *reply_out_length = 0;
-	purple_debug_info("pidgin_juice", "Found the resource.\n");
-	/* end response */
+	else
+	{
+		if (!get_resource(path, query, &resource, &resource_length))
+		{
+			reply_string = g_string_new(NULL);
+			purple_debug_info("pidgin_juice", "Could not find resource.\n");
+			g_string_append(reply_string, "HTTP/1.0 404 Not Found\r\n");
+			g_string_append(reply_string, "Content-length: 0\r\n");
+			g_string_append(reply_string, "\r\n");
+			g_string_append(reply_string, "404 - Not Found\r\n");
+			purple_debug_info("pidgin_juice", "Not Found.\n");
+			*reply_out = reply_string->str;
+			*reply_out_length = reply_string->len;
+			g_string_free(reply_string, FALSE);
+			return FALSE;
+		}
+		*reply_out = g_strdup(""); *reply_out_length = 0;
+		purple_debug_info("pidgin_juice", "Found the resource.\n");
+		/* end response */
+		
+		reply_string = g_string_new(NULL);
+		g_string_append(reply_string, "HTTP/1.0 200 OK\r\n");
+		/* set appropriate mime type */
+		if (g_strrstr(path->str, ".png") != NULL && strlen(g_strrstr(path->str, ".png")) == 4)
+			g_string_append(reply_string, "Content-type: image/png\r\n");
+		if (g_strrstr(path->str, ".html") != NULL && strlen(g_strrstr(path->str, ".html")) == 5)
+			g_string_append(reply_string, "Content-type: text/html\r\n");
+		/* end mime type */
+		g_string_append_printf(reply_string, "Content-length: %d\r\n", resource_length);
+		g_string_append(reply_string, "\r\n");
+		
+		/* turn reply string into binary data */
+		//g_string_append(reply_string, resource);
 	
-	reply_string = g_string_new(NULL);
-	g_string_append(reply_string, "HTTP/1.0 200 OK\r\n");
-	/* set appropriate mime type */
-	if (g_strrstr(path->str, ".png") != NULL && strlen(g_strrstr(path->str, ".png")) == 4)
-		g_string_append(reply_string, "Content-type: image/png\r\n");
-	if (g_strrstr(path->str, ".html") != NULL && strlen(g_strrstr(path->str, ".html")) == 5)
-		g_string_append(reply_string, "Content-type: text/html\r\n");
-	/* end mime type */
-	g_string_append_printf(reply_string, "Content-length: %d\r\n", resource_length);
-	g_string_append(reply_string, "\r\n");
-	
-	/* turn reply string into binary data */
-	//g_string_append(reply_string, resource);
-
-	*reply_out_length = resource_length + reply_string->len;	
-	*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (*reply_out_length+1));
-	
-	memcpy(*reply_out, reply_string->str, reply_string->len);
-	memcpy((*reply_out)+reply_string->len, resource, resource_length);
-	//memcpy((*reply_out), resource, resource_length);
-	//purple_debug_info("pidgin_juice", "reply string1: %d\n", *reply_out_length);
-	//return TRUE;
-	
-	purple_debug_info("pidgin_juice", "reply string: %*s\n", *reply_out_length, *reply_out);
-	//purple_debug_info("pidgin_juice", "resource: %s\n", resource);
-	
-	g_string_free(reply_string, TRUE);
+		*reply_out_length = resource_length + reply_string->len;	
+		*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (*reply_out_length+1));
+		
+		memcpy(*reply_out, reply_string->str, reply_string->len);
+		memcpy((*reply_out)+reply_string->len, resource, resource_length);
+		//memcpy((*reply_out), resource, resource_length);
+		//purple_debug_info("pidgin_juice", "reply string1: %d\n", *reply_out_length);
+		//return TRUE;
+		
+		purple_debug_info("pidgin_juice", "reply string: %*s\n", *reply_out_length, *reply_out);
+		//purple_debug_info("pidgin_juice", "resource: %s\n", resource);
+		
+		g_string_free(reply_string, TRUE);
+	}
 	g_string_free(uri, TRUE);
 	
 	g_string_free(path, TRUE);
@@ -407,7 +419,7 @@ read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
 	request_buffer = g_string_new(NULL);
 	g_string_append_printf(request_buffer, "%s", request_string->str);
 	
-	process_request(request_buffer, &reply, &reply_length);
+	process_request(request_buffer, channel, &reply, &reply_length);
 	
 	write_data(channel, condition, reply, reply_length);
 	
