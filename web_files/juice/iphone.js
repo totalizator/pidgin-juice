@@ -46,15 +46,17 @@ function buddy_receive_message(buddy, message) {
 		buddy_add_unread(buddy);
 }
 function get_events_callback(responseText) {
+	//alert(responseText);
 	var json = eval("(" + responseText + ")");
 	var events = json.events;
-	setTimeout(get_events, 1000);
+	//setTimeout(get_events, 1000);
 	for(i=0; i<events.length; i++) {
 		if (events[i] == undefined || events[i].type == undefined)
 			continue;
 		type = events[i].type;
 		if (type == "sent")
 			type = "received";
+		//alert(type);
 		switch (events[i].type) {
 			case "sent" : 
 			case "received" : {
@@ -69,15 +71,16 @@ function get_events_callback(responseText) {
 		}
 	}
 	//called earlier in case of error
-	//setTimeout(get_events, 1000);
+	setTimeout(get_events, 1000);
 }
 function get_events() {
+	//alert('getting events');
 	ajax_get('/events.js', get_events_callback);
 }
 function newline_or_send(event) {
 	if (event.keyCode != 10 && event.keyCode != 13)
 		return true;
-	alert(event.shiftKey);
+	
 	if (!event.shiftKey) {
 		send_message();
 		return false;
@@ -135,6 +138,7 @@ var chats = [];
 function show_chat(buddy) {
 	var chat = document.getElementById('chat');
 	var chats = document.getElementById('chats');
+	var contact = document.getElementById('contact');
 	
 	//chats.getElementsByTagName('ul')[0].appendChild(buddy.li);
 	buddy_reset_unread(buddy);
@@ -146,6 +150,14 @@ function show_chat(buddy) {
 		get_buddy_history(buddy);
 	//just update it with blanks
 	update_chat_with_history();
+	
+	contact.getElementsByTagName('h1')[0].innerHTML = buddy.display_name;
+	contact.getElementsByTagName('div')[0].innerHTML = buddy.display_name;
+	contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.status_message;
+	contact.getElementsByTagName('div')[0].innerHTML += "<br/>";
+	contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.proto_name;
+	contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.buddyname;;
+	contact.getElementsByTagName('img')[0].src = '/buddy_icon.png?proto_id=' + buddy.proto_id + '&proto_username=' + buddy.account_username + '&buddyname=' + buddy.buddyname;
 	
 	
 	//show chat history
