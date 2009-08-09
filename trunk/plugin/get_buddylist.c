@@ -19,7 +19,7 @@ juice_GET_buddylist(const GHashTable *$_GET)
 	const char *status_message_unescaped;
 	gchar *status_message;
 	const gchar *display_name;
-	const gchar *username;
+	const gchar *buddyname;
 	PurpleBuddyIcon *icon;
 	PurpleStatus *status;
 	gboolean available;
@@ -30,7 +30,7 @@ juice_GET_buddylist(const GHashTable *$_GET)
 	JsonObject *json_buddy;
 	JsonArray *json_buddies;
 	JsonNode *display_name_node;
-	JsonNode *username_node;
+	JsonNode *buddyname_node;
 	JsonNode *available_node;
 	JsonNode *status_message_node;
 	JsonNode *proto_id_node;
@@ -69,7 +69,7 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		 *	account identifier of some kind
 		 */
 		display_name = purple_buddy_get_alias(buddy);
-		username = purple_buddy_get_name(buddy);
+		buddyname = purple_buddy_get_name(buddy);
 		icon = purple_buddy_get_icon(buddy);
 		
 		status = purple_presence_get_active_status(purple_buddy_get_presence(buddy));
@@ -102,11 +102,11 @@ juice_GET_buddylist(const GHashTable *$_GET)
 			json_object_add_member(json_buddy, "display_name", display_name_node);
 		}
 		
-		if (username != NULL)
+		if (buddyname != NULL)
 		{
-			username_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(username_node, username);
-			json_object_add_member(json_buddy, "username", username_node);
+			buddyname_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(buddyname_node, buddyname);
+			json_object_add_member(json_buddy, "buddyname", buddyname_node);
 		}
 		
 		available_node = json_node_new(JSON_NODE_VALUE);

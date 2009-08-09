@@ -121,7 +121,7 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 	escaped = g_strescape(proto_username, "");
 	json_node_set_string(proto_username_node, escaped);
 	g_free(escaped);
-	json_object_add_member(return_history, "proto_username", proto_username_node);
+	json_object_add_member(return_history, "account_username", proto_username_node);
 	
 	return_history_node = json_node_new(JSON_NODE_OBJECT);
 	json_node_take_object(return_history_node, return_history);
