@@ -91,9 +91,9 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	}
 	else if (g_str_equal(path->str, "/send_im.js"))
 	{
-		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup($_GET, "buddyname"), 
+		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup($_GET, "username"), 
 										  (gchar *)g_hash_table_lookup($_GET, "proto_id"), 
-										  (gchar *)g_hash_table_lookup($_GET, "proto_username"),
+										  (gchar *)g_hash_table_lookup($_GET, "account_username"),
 										  (gchar *)g_hash_table_lookup($_GET, "message"), 
 										  resource_out_length);
 		return_code = TRUE;
@@ -216,8 +216,11 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	int position = 0;
 	char *temp_substr;
 	
+	
 	purple_debug_info("pidgin_juice", "Parsing request\n");
-	if (request_string->len <= 4 || strncmp(request_string->str, "GET ", 4) != 0)
+	if (!	((request_string->len > 4 && strncmp(request_string->str, "GET ", 4) == 0)
+				|| (request_string->len > 5 && strncmp(request_string->str, "POST ", 5) == 0)
+			))
 	{
 		reply_string = g_string_new(NULL);
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
@@ -257,7 +260,10 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	}
 	
 	uri = g_string_new(NULL);
-	g_string_append_len(uri, request_string->str+4, position-4);
+	if (strncmp(request_string->str, "POST ", 5)==0)
+		g_string_append_len(uri, request_string->str+5, position-5);
+	else
+		g_string_append_len(uri, request_string->str+4, position-4);
 	purple_debug_info("pidgin_juice", "Request for %s\n", uri->str);
 	
 	temp_substr = strstr(uri->str, "?");
