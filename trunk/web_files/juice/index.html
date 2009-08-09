@@ -45,9 +45,10 @@
 			<div id="send_bar">
 				<!---->
 				<a href="#" onclick="send_message();">Send</a>
+				<!----
+				<textarea onkeypress="if(!event.shiftKey && (event.keyCode == 10 || event.keyCode == 13)) {alert('noshift shift newline'); return false; send_message(); return false;}"></textarea>
 				<!---->
-				<textarea onkeypress="if(event.keyCode == 10) {send_message(); return false;}"></textarea>
-				<!---->
+				<textarea onkeypress="return newline_or_send(event);"></textarea>
 			</div>
 			<!---->
 		</div>

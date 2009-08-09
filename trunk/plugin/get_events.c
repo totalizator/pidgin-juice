@@ -21,8 +21,9 @@ struct _ConnectedSignals {
 	gulong received_im_signal;
 	gulong buddy_typing_signal;
 	gulong buddy_typing_stopped_signal;
+	gulong sent_im_signal;
 };
-static struct _ConnectedSignals ConnectedSignals = {0,0,0,0};
+static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0};
 
 static gboolean
 disconnect_signals_cb(gpointer data)
@@ -176,6 +177,25 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 	
 	events_push_to_queue(output);
 }
+static void
+sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
+				   PurpleConversation *conv, PurpleMessageFlags flags,
+				   gpointer user_data)
+{
+	gchar *output;
+	output = g_strdup_printf("{ \"type\":\"sent\","
+							 "\"message\":\"%s\", "
+							 "\"buddyname\":\"%s\", "
+							 "\"proto_id\":\"%s\", "
+							 "\"account_username\":\"%s\" }",
+							 message,
+							 buddyname,
+							 purple_account_get_protocol_id(account),
+							 purple_account_get_username(account));
+	
+	events_push_to_queue(output);
+	//received_im_msg_cb(account, sender, message, conv, flags, user_data);
+}
 
 static void
 buddy_typing_cb(PurpleAccount *account, const char *name, gpointer user_data)
@@ -226,6 +246,13 @@ connect_to_signals()
 		ConnectedSignals.received_im_signal =
 			purple_signal_connect(conv_handle, "received-im-msg",
 								  &ConnectedSignals, PURPLE_CALLBACK(received_im_msg_cb), 
+								  NULL);
+	}
+	if (!ConnectedSignals.sent_im_signal)
+	{
+		ConnectedSignals.sent_im_signal =
+			purple_signal_connect(conv_handle, "sent-im-msg",
+								  &ConnectedSignals, PURPLE_CALLBACK(sent_im_msg_cb), 
 								  NULL);
 	}
 	if (!ConnectedSignals.buddy_typing_signal)

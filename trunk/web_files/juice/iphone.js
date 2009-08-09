@@ -1,5 +1,54 @@
+function get_events_callback(responseText) {
+	alert(responseText);
+	var json = eval("(" + responseText + ")");
+	var events = json.events;
+	var chat = document.getElementById('chat');
+	var lis = chat.getElementsByTagName('ul')[0];
+	var current_chat_buddy = get_buddy_from_collection(chat.buddy);
+	for(i=0; i<events.length; i++) {
+		if (events[i] == undefined || events[i].type == undefined)
+			continue;
+		switch (events[i].type) {
+			case "sent" : 
+			case "received" : {
+				buddy = get_buddy_from_collection(events[i].buddyname, events[i].proto_id, events[i].account_username);
+				if(!buddy) {
+					alert("no such buddy "+events[i].buddyname);
+					continue;
+				}
+				buddy.history.unshift(events[i]);
+				if (buddy == current_chat_buddy) {
+					li = document.createElement('li');
+					li.className = events[i].type;
+					li.innerHTML = events[i].message;
+					lis.appendChild(li);
+					//lis.scrollTop = lis.scrollHeight;
+					scrollTo(0,10000);
+				}
+				break;
+			}
+		}
+	}
+	setTimeout(get_events, 10);
+}
+function get_events() {
+	ajax_get('/events.js', get_events_callback);
+}
+function newline_or_send(event) {
+	if (event.keyCode != 10 && event.keyCode != 13)
+		return true;
+	
+	if (!event.shiftKey) {
+		send_message();
+		return false;
+	}
+	
+	event.target.value = event.target.value + "\n";
+	
+	return true;
+}
 function send_message_callback(responseText) {
-	get_buddy_history();
+	//get_buddy_history();
 }
 function send_message() {
 	var page = '/send_im.js';
@@ -10,10 +59,10 @@ function send_message() {
 	textarea.value = "";
 	
 	page += '?';
-	page += 'username='+buddy.username;
+	page += 'username='+buddy.buddyname;
 	page += '&proto_id='+buddy.proto_id;
 	page += '&account_username='+buddy.account_username;
-	page += '&message='+escape(message)
+	page += '&message='+message;
 	//alert(page);
 	
 	//This is currently using both POST and GET. Probably only the GET values are
@@ -25,11 +74,11 @@ function send_message() {
 }
 function alert_buddy(buddy) {
 	s = "";
-	s += "\nusername: " + buddy.username;
+	s += "\nbuddyname: " + buddy.buddyname;
 	s += "\nproto_id: " + buddy.proto_id;
 	s += "\naccount_username: " + buddy.account_username;
 	s += "\n\nAlternative properties sometimes used:";
-	s += "\nbuddyname: " + buddy.buddyname;
+	s += "\nusername: " + buddy.username;
 	s += "\nproto_username: " + buddy.proto_username;
 	alert(s);
 }
@@ -60,19 +109,18 @@ function show_chat(buddy) {
 	
 	//show chat history
 	change_page('chat');
+	chat.getElementsByTagName('textarea')[0].focus();
 }
 function get_buddy_history(buddy) {
 	if (buddy===undefined)
 		buddy = document.getElementById('chat').buddy;
-	url = '/history.js?buddyname='+buddy.username+'&proto_id='+buddy.proto_id+'&proto_username='+buddy.account_username;
+	url = '/history.js?buddyname='+buddy.buddyname+'&proto_id='+buddy.proto_id+'&proto_username='+buddy.account_username;
 	ajax_get(url, update_buddy_history);
 }
 function update_buddy_history(response) {
-	//eval("var json = " + response);
+	alert(response);
 	var json = eval("(" + response + ")");
-	buddy = get_buddy_from_collection(json.buddyname, json.proto_id, json.proto_username);
-	//testing
-	buddy.history_test = "test";
+	buddy = get_buddy_from_collection(json.buddyname, json.proto_id, json.account_username);
 	buddy.history = json.history;
 	buddy.history_string = response;
 	update_chat_with_history();
@@ -95,13 +143,14 @@ function update_chat_with_history() {
 		else
 			ul.appendChild(li);
 	}
-	ul.scrollTop = ul.scrollHeight;
+	//ul.scrollTop = ul.scrollHeight;
+	scrollTo(0,10000);
 }
 function show_contact(buddy) {
 	var contact = document.getElementById('contact');
 	contact.buddy = buddy;
 	contact.getElementsByTagName('h1')[0].innerHTML = buddy.display_name;
-	//contact.getElementsByTagName('img')[0].src = '/buddy_icon.png?proto_id=' + buddy.proto_id + '&proto_username=' + buddy.account_username + '&buddyname=' + buddy.username;
+	//contact.getElementsByTagName('img')[0].src = '/buddy_icon.png?proto_id=' + buddy.proto_id + '&proto_username=' + buddy.account_username + '&buddyname=' + buddy.buddyname;
 	change_page('contact');
 }
 //1: swipe forwad; -1: swipe backward; 0: just change
@@ -145,6 +194,11 @@ function update_buddies(buddies) {
 	var json = eval("(" + buddies + ")");
 	var buddies = json.buddies;
 	
+	if(!buddies.length) {
+		buddies_update_timeout = setTimeout(get_buddies, 1000);
+		return;
+	}
+	
 	buddies.sort(buddy_sort_callback);
 	
 	time_updated = new Date().getTime();
@@ -155,7 +209,7 @@ function update_buddies(buddies) {
 	for (var i=0; i<buddies.length; i++)
 	{
 		buddy = buddies[i];
-		existing_buddy=get_buddy_from_collection(buddy.username, buddy.proto_id, buddy.account_username);
+		existing_buddy=get_buddy_from_collection(buddy.buddyname, buddy.proto_id, buddy.account_username);
 		if (!existing_buddy)
 		{
 			existing_buddy = buddy = create_buddy(buddy);
@@ -166,30 +220,29 @@ function update_buddies(buddies) {
 		buddy.time_updated = time_updated;
 		
 	}
-	/*
+	
+	/* remove contacts that aren't in the list
 	for(i=0; i<buddylist.childNodes.length; i++) {
 		if(buddylist.childNodes[i].style == undefined)
 			continue;
 		if (buddylist.childNodes[i].buddy.time_updated < time_updated) {
 			alert('old contact');
 			b=buddylist.childNodes[i].buddy;
-			g=buddylist[b.username];
+			g=buddylist[b.buddyname];
 			for(j=0; j <g.length; j++){
 				if(g[j] == b) {
 					if (j == g.length-1)
-						buddylist[b.username] = g.slice(0, j);
+						buddylist[b.buddyname] = g.slice(0, j);
 					else
-						buddylist[b.username] = g.slice(0, j).concat(g.slice(j+1));
+						buddylist[b.buddyname] = g.slice(0, j).concat(g.slice(j+1));
 					break;
 				}
 			}
 		}
 	}
 	*/
-	if (buddylist.childNodes.length)
-		buddies_update_timeout = setTimeout(get_buddies, 5000);
-	else
-		buddies_update_timeout = setTimeout(get_buddies, 1000);
+	
+	buddies_update_timeout = setTimeout(get_buddies, 5000);
 }
 function create_buddy(buddy) {
 	a = document.createElement('A');
@@ -216,42 +269,43 @@ function update_buddy(buddy_old, buddy_new) {
 }
 var buddies_collection = {};
 function add_buddy_to_collection(buddy) {
-	buddies_collection[buddy.username].push(buddy);
+	buddies_collection[buddy.buddyname].push(buddy);
 }
 function remove_buddy_from_collection(buddy) {
-	if (buddies_collection[buddy.username] == undefined)
+	if (buddies_collection[buddy.buddyname] == undefined)
 		return false;
-	for(j=0; j<buddies_collection[buddy.username]; j++) {
-		if(buddies_collection[buddy.username][j].proto_id == buddy.proto_id
-			&& buddies_collection[buddy.username][j].account_username == buddy.account_username) {
-			buddies_collection[buddy.username].splice(j, 1);
+	for(j=0; j<buddies_collection[buddy.buddyname]; j++) {
+		if(buddies_collection[buddy.buddyname][j].proto_id == buddy.proto_id
+			&& buddies_collection[buddy.buddyname][j].account_username == buddy.account_username) {
+			buddies_collection[buddy.buddyname].splice(j, 1);
 			return true;
 		}
 	}
 	return false;
 }
-function get_buddy_from_collection(username, proto_id, account_username) {
+function get_buddy_from_collection(buddyname, proto_id, account_username) {
 	//if it's an object, find a similar one in the collection
-	if(username.username != undefined) {
-		account_username = username.account_username;
-		proto_id = username.proto_id;
-		username = username.username;
+	if(buddyname.buddyname != undefined) {
+		account_username = buddyname.account_username;
+		proto_id = buddyname.proto_id;
+		buddyname = buddyname.buddyname;
 	}
-	if(buddies_collection[username] == undefined)
+	if(buddies_collection[buddyname] == undefined)
 	{
-		buddies_collection[username] = [];
+		buddies_collection[buddyname] = [];
 	}
 	//if it already exists in the list
 	existing_buddy = false;
-	for(j=0; j<buddies_collection[username].length; j++)
+	for(j=0; j<buddies_collection[buddyname].length; j++)
 	{
-		if(buddies_collection[username][j].proto_id == proto_id
-		  && buddies_collection[username][j].account_username == account_username)
+		if(buddies_collection[buddyname][j].proto_id == proto_id
+		  && buddies_collection[buddyname][j].account_username == account_username)
 		{
-			existing_buddy=buddies_collection[username][j];
+			existing_buddy=buddies_collection[buddyname][j];
 			break;
 		}
 	}
+	existing_buddy.username = existing_buddy.buddyname;
 	return existing_buddy;
 }
 function get_buddies() {
@@ -332,9 +386,10 @@ function ajax_get(page, func)
 addEventListener("load", function(event)
 {
 	//Uncomment this to enable landscape mode
-	//setTimeout(checkOrientAndLocation, 300);
+	setTimeout(checkOrientAndLocation, 300);
 	setTimeout(scrollTo, 0, 0, 1);
 	setTimeout(get_buddies, 300);
+	setTimeout(get_events, 1000);
 }, false);
 var currentWidth = 0;
 function checkOrientAndLocation()
