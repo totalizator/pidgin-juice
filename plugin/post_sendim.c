@@ -7,33 +7,11 @@
  *
  */
 
-//unused :)
-static PurpleBuddy *
-juice_find_buddy(gchar *buddyname, gchar *proto_id, gchar *proto_username)
-{
-	PurpleAccount *account;
-	
-	if(buddyname == NULL)
-		return NULL;
-	if(proto_id == NULL)
-		return NULL;
-	if(proto_username == NULL)
-		return NULL;
-	
-	account = purple_accounts_find(proto_username, proto_id);
-	if (account == NULL)
-		return NULL;
-	
-	return purple_find_buddy(account, buddyname);
-}
-
 static gchar *
 juice_POST_sendim(const gchar *buddyname, const gchar *proto_id, const gchar *proto_username, const gchar *message, gsize *length)
 {
 	PurpleAccount *account;
-	gint result;
 	gchar *return_string;
-	const gchar *reason;
 	PurpleConversation *conv;
 	
 	if (!buddyname || !proto_id || !proto_username)
