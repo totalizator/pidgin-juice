@@ -17,6 +17,7 @@ body > div {
     position:relative;
 }
 body > div {
+	overflow:hidden;
 	/* also change #chat > ul */
 	min-height: 416px;
 }
@@ -92,6 +93,9 @@ body > div > ul > li > a.away {
 	color: grey;
 	font-style: italic;
 }
+body > div > ul > li > span {
+	padding: 8px 8px 8px 8px;
+}
 
 #chat {
 	background: url(/background_send_bar.png) bottom left repeat-x;
@@ -101,9 +105,9 @@ body > div > ul > li > a.away {
 	list-style-type: none;
 }
 #chat > ul {
+	overflow:hidden;
 	/* also change body > div */
 	min-height: 281px;
-	overflow:hidden;
 	overflow-y:scroll;
 }
 #chat > div#send_bar {
@@ -145,6 +149,7 @@ body.landscape #chat > div#send_bar {
 	margin:-5px;
 	background: transparent;
 	outline: 0 none transparent;
+	font-size: 20px;
 }
 
 #chat > ul > li {
