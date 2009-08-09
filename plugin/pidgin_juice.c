@@ -285,6 +285,7 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 		g_string_append(reply_string, "HTTP/1.0 404 Not Found\r\n");
 		g_string_append(reply_string, "Content-length: 0\r\n");
 		g_string_append(reply_string, "\r\n");
+		g_string_append(reply_string, "404 - Not Found\r\n");
 		purple_debug_info("pidgin_juice", "Not Found.\n");
 		*reply_out = reply_string->str;
 		*reply_out_length = reply_string->len;
@@ -335,7 +336,6 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	GIOStatus ret;
 	GError *err = NULL;
 	gsize len = 0;
-	gchar *c = NULL;
 
 	if (condition & G_IO_HUP)
 		purple_debug_error("pidgin_juice", "Write end of pipe died!\n");
@@ -345,12 +345,6 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	g_io_channel_set_buffered(gio, FALSE);
 	g_io_channel_set_flags(gio, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_flush(gio, NULL);
-	
-	c = ((gchar *)data)+(data_length-10);
-	purple_debug_info("pidgin_juice", "Chars: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", *(c+0), (*(c+1)), (*(c+2)), (*(c+3)), (*(c+4)), (*(c+5)), (*(c+6)), (*(c+7)), (*(c+8)), (*(c+9)));
-	for(len=0; len<10; len++) {
-		
-	}
 	
 	ret = g_io_channel_write_chars (gio, data, data_length, &len, &err);
 	//DONT REMOVE THIS DEBUG.
@@ -363,7 +357,6 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 		purple_debug_error("pidgin_juice", "Error writing: (%u) %s\n", err->code, err->message);
 	else
 		g_io_channel_flush(gio, NULL);
-	g_io_channel_flush(gio, NULL);
 
 	return TRUE;
 }
@@ -474,7 +467,7 @@ static GIOChannel
 	address.sin_family = AF_INET;
 	address.sin_port = htons(port);
 	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	for (i = 1; i <= 10; i++)
+	for (i = 1; i <= 1; i++)
 	{
 		if (bind(sock, (struct sockaddr *) &address, sizeof(address)) >= 0 )
 		{
