@@ -1,11 +1,42 @@
+function send_message() {
+	var page = '/send_im.js';
+	var chat = document.getElementById('chat');
+	var buddy = chat.buddy;
+	var textarea = chat.getElementsByTagName('textarea')[0];
+	var message = textarea.value;
+	textarea.value = "";
+	
+	var json = '';
+	json += '{';
+	json += ' "username" : "'+buddy.username+'"';
+	json += ' , "proto_id" : "'+buddy.proto_id+'"';
+	json += ' , "account_username" : "'+buddy.account_username+'"';
+	json += ' , "message" : "'+message.replace(/"/g, '\\"')+'"';
+	json += ' }';
+	alert(json);
+	
+	page += '?';
+	page += 'username='+buddy.username;
+	page += '&proto_id='+buddy.proto_id;
+	page += '&account_username='+buddy.account_username;
+	page += '&message='+escape(message)
+	alert(page);
+	
+	//This is currently using both POST and GET. Probably only the GET values are
+	//being read server-side.
+	//When server is updated, remove the get component
+	
+	//Should these all be url encoded? if so, who will decode them? if not, extra & and = will split it apart!;
+	ajax_post(page, json, function(text){alert('done');alert(text);});
+}
 function alert_buddy(buddy) {
 	s = "";
-	s = s + "\nusername: " + buddy.username;
-	s = s + "\nproto_id: " + buddy.proto_id;
-	s = s + "\naccount_username: " + buddy.account_username;
-	s = s + "\n\nAlternative properties sometimes used:";
-	s = s + "\nbuddyname: " + buddy.buddyname;
-	s = s + "\nproto_username: " + buddy.proto_username;
+	s += "\nusername: " + buddy.username;
+	s += "\nproto_id: " + buddy.proto_id;
+	s += "\naccount_username: " + buddy.account_username;
+	s += "\n\nAlternative properties sometimes used:";
+	s += "\nbuddyname: " + buddy.buddyname;
+	s += "\nproto_username: " + buddy.proto_username;
 	alert(s);
 }
 function getStyle(el, prop) {
@@ -29,6 +60,9 @@ function show_chat(buddy) {
 	
 	if (buddy.is_chat_updated == undefined || !buddy.is_chat_updated)
 		get_buddy_history(buddy);
+	//just update it with blanks
+	update_chat_with_history();
+	
 	
 	//show chat history
 	change_page('chat');
@@ -53,6 +87,8 @@ function update_chat_with_history() {
 	while(ul.childNodes.length > 0)
 		ul.removeChild(ul.firstChild);
 	var earliest_message = ul.childNodes.length ? ul.childNodes[0] : false;
+	if (chat.buddy.history == undefined)
+		chat.buddy.history = [];
 	for(i=chat.buddy.history.length-1; i>=0; i--) {
 		li = document.createElement('LI');
 		if (chat.buddy.history[i].type == "sent")
@@ -154,7 +190,7 @@ function update_buddies(buddies) {
 			}
 		}
 		*/
-	//buddies_update_timeout = setTimeout(get_buddies, 10000);
+	buddies_update_timeout = setTimeout(get_buddies, 5000);
 }
 function create_buddy(buddy) {
 	a = document.createElement('A');
@@ -222,6 +258,41 @@ function get_buddy_from_collection(username, proto_id, account_username) {
 function get_buddies() {
 	ajax_get("buddies_list.js", update_buddies);
 }
+function ajax_post(page, post_string, func) {		
+	var req = null;
+	if (window.XMLHttpRequest)
+	{
+		req = new XMLHttpRequest();
+	}
+	else if (window.ActiveXObject)
+	{
+		try {
+			req = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch (e)
+		{
+			try {
+				req = new ActiveXObject("Microsoft.XMLHTTP");
+			} catch (e) {}
+		}
+	 }
+
+	req.onreadystatechange = function()
+	{
+		if(req.readyState == 4)
+		{
+			if(req.status == 200 && req.responseText) {
+				if(func != undefined)
+					func(req.responseText);
+			}
+		}
+	};
+	if (page == undefined)
+		page = "";
+	if(post_string == undefined)
+		post_string = "";
+	req.open("POST", page, true);
+	req.send(post_string);
+}
 function ajax_get(page, func)
 {
 	var req = null;
@@ -246,7 +317,8 @@ function ajax_get(page, func)
 		if(req.readyState == 4)
 		{
 			if(req.status == 200 && req.responseText) {
-				func(req.responseText);
+				if(func != undefined)
+					func(req.responseText);
 			}
 		}
 	};

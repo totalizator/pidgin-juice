@@ -17,7 +17,8 @@ body > div {
     position:relative;
 }
 body > div {
-	height: 416px;
+	/* also change #chat > ul */
+	min-height: 416px;
 }
 body > *[selected="true"] {
     display: block;
@@ -100,8 +101,10 @@ body > div > ul > li > a.away {
 	list-style-type: none;
 }
 #chat > ul {
-	height: 281px;
-	overflow:scroll;
+	/* also change body > div */
+	min-height: 281px;
+	overflow:hidden;
+	overflow-y:scroll;
 }
 #chat > div#send_bar {
 	height: 65px;
@@ -127,7 +130,7 @@ body.landscape #chat > div#send_bar {
 	/*margin: auto 7px 7px auto;*/
 	margin:0; padding:0;
 	margin-top: 47px;
-	margin-right: -85px;
+	margin-right: -78px;
 	color: transparent;
 	float: right;
 }
