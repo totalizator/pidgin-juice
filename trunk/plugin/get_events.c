@@ -14,68 +14,71 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 
 {
 	
-	
+	g_queue_push_tail(&message_queue, g_strdup(""));
 }
 
 static void
 buddy_typing_cb(PurpleAccount *account, const char *name, gpointer user_data)
 {
 	
+	g_queue_push_tail(&message_queue, g_strdup(""));
 }
 static void 
 buddy_typing_stopped_cb(PurpleAccount *account, const char *name, gpointer user_data)
 {
 	
+	g_queue_push_tail(&message_queue, g_strdup(""));
 }
+
+#ifndef G_QUEUE_INIT
+#define G_QUEUE_INIT { NULL, NULL, 0 }
+#endif
+
+static GQueue message_queue = G_QUEUE_INIT;
 
 struct _ConnectedSignals {
 	guint disconnect_timer;
 	
 	gulong received_im_signal;
 	gulong buddy_typing_signal;
-	gulong buddy_typing_stoppped_signal;
+	gulong buddy_typing_stopped_signal;
 };
 
 static struct _ConnectedSignals ConnectedSignals = NULL;
-
-static GHashTable *message_queue = NULL;
-static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
-static GCond *condition = NULL;
-
-#ifdef _WIN32
-//these two #defines override g_static_mutex_lock and
-// g_static_mutex_unlock so as to remove "strict-aliasing"
-// compiler warnings
-#define g_static_mutex_get_mutex2(mutex) \
-g_static_mutex_get_mutex ((GMutex **)(void*)mutex)
-#define g_static_mutex_lock2(mutex) \
-g_mutex_lock (g_static_mutex_get_mutex2 (mutex))
-#define g_static_mutex_unlock2(mutex) \
-g_mutex_unlock (g_static_mutex_get_mutex2 (mutex))
-#else
-#define g_static_mutex_get_mutex2 g_static_mutex_get_mutex
-#define g_static_mutex_lock2 g_static_mutex_lock
-#define g_static_mutex_unlock2 g_static_mutex_unlock
-#endif
 
 static void
 connect_to_signals()
 {
     void *conv_handle = purple_conversations_get_handle();
 	
+	purple_debug_info("pidgin_juice", "Connecting signals\n");
+	
 	if (ConnectedSignals == NULL)
 		ConnectedSignals = g_new0(struct _ConnectedSignals, 1);
-	else
-		return;
 	
-	purple_signal_connect(conv_handle, "received-im-msg",
-						  ConnectedSignals, PURPLE_CALLBACK(received_im_msg_cb), NULL);
-    purple_signal_connect(conv_handle, "buddy-typing",
-						  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_cb), NULL);
-	purple_signal_connect(conv_handle, "buddy-typing-stopped",
-						  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_stopped_cb), NULL);
+	if (!ConnectedSignals->received_im_signal)
+	{
+		ConnectedSignals->received_im_signal =
+			purple_signal_connect(conv_handle, "received-im-msg",
+								  ConnectedSignals, PURPLE_CALLBACK(received_im_msg_cb), 
+								  NULL);
+	}
+	if (!ConnectedSignals->buddy_typing_signal)
+	{
+		ConnectedSignals->buddy_typing_signal = 
+			purple_signal_connect(conv_handle, "buddy-typing",
+								  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_cb), 
+								  NULL);
+	}
+	if (!ConnectedSignals->buddy_typing_stopped_signal)
+	{
+		ConnectedSignals->buddy_typing_stopped_signal = 
+			purple_signal_connect(conv_handle, "buddy-typing-stopped",
+								  ConnectedSignals, PURPLE_CALLBACK(buddy_typing_stopped_cb), 
+								  NULL);
+	}
 	
-	//add a timeout here to disconnect
+	//add a timeout here to disconnect after 3 mins
 	if (ConnectedSignals->disconnect_timer)
 		purple_timeout_remove(ConnectedSignals->disconnect_timer);
 	
@@ -96,45 +99,72 @@ disconnect_signals()
 static gboolean
 disconnect_signals_cb(gpointer data)
 {
+	purple_debug_info("pidgin_juice", "Disconnecting signals\n");
+	
 	purple_signal_disconnect_by_handle(ConnectedSignals);
 	g_free(ConnectedSignals);
 	ConnectedSignals = NULL;
 	
+	while(g_queue_pop_head(&queue))
+	{
+		//clear the queue
+	}
+	
 	return FALSE; //return false so that the event doesn't get fired twice
 }
 
-static gchar *
-juice_GET_events(gsize *length)
+static gboolean
+write_to_client(GIOChannel *channel)
 {
-	gboolean condition_result;
-	GTimeVal endtime = {0,0};
-	gchar *returnstring;
+	GString returnstring = NULL;
+	gchar *headers = NULL;
+	gchar *next_event;
+	gboolean first = TRUE;
 	
-	//this funciton should block until there's an event, or until a minute is up
-	connect_to_signals();
+	returnstring = g_string_new("{ \"events\" : [ ");
 	
-	//block here
-	//wait for message for a maximum of 60 seconds
-	g_get_current_time(&endtime);
-	g_time_val_add(&endtime, 60 * G_USEC_PER_SEC);
-	condition_result = g_cond_timed_wait(condition, g_static_mutex_get_mutex2(&mutex), &endtime);
-	
-	if(!condition_result)
+	if (g_queue_is_empty())
 	{
-		//we timed out while waiting
-		g_static_mutex_unlock2(&mutex);
-		returnstring = g_strdup("{ \"events\" : [ { \"type\":\"continue\" } ] }");
-		if (length != NULL)
-			*length = strlen(returnstring);
+		returnstring = g_string_append(returnstring, 
+									   "{ \"type\":\"continue\" }");
 	} else {
-		//do something :(
-		returnstring = g_strdup("dummy");
-		if (length != NULL)
-			*length = strlen(returnstring);		
+		while (next_event = g_queue_pop_head(&queue))
+		{
+			if (first)
+				first = FALSE;
+			else
+				returnstring = g_string_append_c(returnstring, ',');
+			returnstring = g_string_append(returnstring, next_event);
+			g_free(next_event);
+		}
 	}
-	g_static_mutex_unlock2(&mutex);
+	
+	returnstring = g_string_append(returnstring, " ] }");
+	
+	headers = g_strdup_printf("HTTP/1.0 200 OK\r\n"
+					   "Content-type: application/json\r\n"
+					   "Content-length: %d\r\n\r\n", returnstring->len);
+	
+	write_data(channel, G_IO_OUT, headers, strlen(headers))
+	write_data(channel, G_IO_OUT, returnstring, returnstring->len + 1);
+	
+	g_free(headers);
+	g_string_free(returnstring, TRUE);
 	
 	disconnect_signals();
 	
-	return returnstring;
+	current_seq++;
+	
+	return FALSE;
+}
+
+static guint current_seq = 0;
+
+static void
+juice_GET_events(GIOChannel *channel)
+{	
+	connect_to_signals();
+	
+	if (!g_queue_is_empty())
+		write_to_client(channel);
 }
