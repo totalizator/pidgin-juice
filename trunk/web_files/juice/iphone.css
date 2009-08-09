@@ -112,9 +112,9 @@ body > div > ul > li > span {
 }
 #chat > div#send_bar {
 	height: 65px;
-	width: 220px;
+	width: 200px;
 	/**/
-	-webkit-border-image: url(/background_send_bar_full_no_button.png) 15 85 15 15 / 15px 85px 15px 15px stretch stretch;
+	-webkit-border-image: url(/background_send_bar_full_no_button.png) 15 85 15 25 / 15px 85px 15px 25px stretch stretch;
 	/**
 	border: 15px solid black;
 	/**/
@@ -172,7 +172,7 @@ body.landscape #chat > div#send_bar {
 
 #contact > img {
 	display: block;
-	margin: 5px; auto;
+	margin: 5px auto;
 }
 #contact > div {
 	padding: 5px;

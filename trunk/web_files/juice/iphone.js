@@ -46,7 +46,7 @@ function buddy_receive_message(buddy, message) {
 		buddy_add_unread(buddy);
 }
 function get_events_callback(responseText) {
-	//alert(responseText);
+	alert(responseText);
 	var json = eval("(" + responseText + ")");
 	var events = json.events;
 	//setTimeout(get_events, 1000);
@@ -153,7 +153,8 @@ function show_chat(buddy) {
 	
 	contact.getElementsByTagName('h1')[0].innerHTML = buddy.display_name;
 	contact.getElementsByTagName('div')[0].innerHTML = buddy.display_name;
-	contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.status_message;
+	if (buddy.status_message != undefined)
+		contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.status_message;
 	contact.getElementsByTagName('div')[0].innerHTML += "<br/>";
 	contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.proto_name;
 	contact.getElementsByTagName('div')[0].innerHTML += "<br/>"+ buddy.buddyname;;
