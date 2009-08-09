@@ -15,7 +15,107 @@
 static GQueue queue = G_QUEUE_INIT;
 static GHashTable *channels = NULL; 
 static guint current_seq = 0;
+struct _ConnectedSignals {
+	guint disconnect_timer;
+	
+	gulong received_im_signal;
+	gulong buddy_typing_signal;
+	gulong buddy_typing_stopped_signal;
+};
+static struct _ConnectedSignals ConnectedSignals = {0,0,0,0};
 
+static gboolean
+disconnect_signals_cb(gpointer data)
+{
+	purple_debug_info("pidgin_juice", "Disconnecting signals\n");
+	
+	purple_signals_disconnect_by_handle(&ConnectedSignals);
+	
+	while(g_queue_pop_head(&queue))
+	{
+		//clear the queue
+	}
+	
+	current_seq = 0;
+	
+	return FALSE; //return false so that the event doesn't get fired twice
+}
+static void
+disconnect_signals()
+{
+	if (ConnectedSignals.disconnect_timer)
+		purple_timeout_remove(ConnectedSignals.disconnect_timer);
+	
+	ConnectedSignals.disconnect_timer = purple_timeout_add_seconds(60, 
+																	disconnect_signals_cb, &ConnectedSignals);
+}
+
+static gboolean
+write_to_client(GIOChannel *channel)
+{
+	GString *returnstring = NULL;
+	gchar *headers = NULL;
+	gchar *next_event;
+	gboolean first = TRUE;
+	guint timeout;
+	
+	if (channels != NULL)
+	{
+		timeout = GPOINTER_TO_INT(g_hash_table_lookup(channels, channel));
+		if (timeout)
+			purple_timeout_remove(timeout);
+		g_hash_table_steal(channels, channel);
+	}
+	
+	returnstring = g_string_new("{ \"events\" : [ ");
+	
+	if (g_queue_is_empty(&queue))
+	{
+		returnstring = g_string_append(returnstring, 
+									   "{ \"type\":\"continue\" }");
+	} else {
+		while ((next_event = g_queue_pop_head(&queue)))
+		{
+			if (first)
+				first = FALSE;
+			else
+				returnstring = g_string_append_c(returnstring, ',');
+			returnstring = g_string_append(returnstring, next_event);
+			g_free(next_event);
+		}
+	}
+	
+	returnstring = g_string_append(returnstring, " ] }");
+	
+	headers = g_strdup_printf("HTTP/1.0 200 OK\r\n"
+					   "Content-type: application/json\r\n"
+					   "Content-length: %d\r\n\r\n", returnstring->len);
+	
+	write_data(channel, G_IO_OUT, headers, strlen(headers));
+	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
+	
+	g_free(headers);
+	g_string_free(returnstring, TRUE);
+	
+	disconnect_signals();
+	
+	current_seq++;
+	
+	return FALSE;
+}
+static void
+events_push_to_queue(gchar *output)
+{
+	//Add the event to the queue
+	g_queue_push_tail(&queue, output);
+	
+	//Loop through the channels to return the events
+	if (channels && g_hash_table_size(channels))
+	{
+		//g_hash_table_foreach(channels, events_table_foreach_cb, NULL);		
+		g_hash_table_foreach(channels, (GHFunc)write_to_client, NULL);
+	}
+}
 static void
 received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 				   PurpleConversation *conv, PurpleMessageFlags flags,
@@ -112,45 +212,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *name, gpointer user_
 //	write_to_client(key);
 //}
 
-static void
-events_push_to_queue(gchar *output)
-{
-	//Add the event to the queue
-	g_queue_push_tail(&queue, output);
-	
-	//Loop through the channels to return the events
-	if (channels && g_hash_table_size(channels))
-	{
-		//g_hash_table_foreach(channels, events_table_foreach_cb, NULL);		
-		g_hash_table_foreach(channels, (GHFunc)write_to_client, NULL);
-	}
-}
 
-struct _ConnectedSignals {
-	guint disconnect_timer;
-	
-	gulong received_im_signal;
-	gulong buddy_typing_signal;
-	gulong buddy_typing_stopped_signal;
-};
-static struct _ConnectedSignals ConnectedSignals = {0,0,0,0};
-
-static gboolean
-disconnect_signals_cb(gpointer data)
-{
-	purple_debug_info("pidgin_juice", "Disconnecting signals\n");
-	
-	purple_signals_disconnect_by_handle(&ConnectedSignals);
-	
-	while(g_queue_pop_head(&queue))
-	{
-		//clear the queue
-	}
-	
-	current_seq = 0;
-	
-	return FALSE; //return false so that the event doesn't get fired twice
-}
 
 static void
 connect_to_signals()
@@ -187,70 +249,6 @@ connect_to_signals()
 	
 	ConnectedSignals.disconnect_timer = purple_timeout_add_seconds(180, 
 																	disconnect_signals_cb, &ConnectedSignals);
-}
-
-static void
-disconnect_signals()
-{
-	if (ConnectedSignals.disconnect_timer)
-		purple_timeout_remove(ConnectedSignals.disconnect_timer);
-	
-	ConnectedSignals.disconnect_timer = purple_timeout_add_seconds(60, 
-																	disconnect_signals_cb, &ConnectedSignals);
-}
-
-static gboolean
-write_to_client(GIOChannel *channel)
-{
-	GString *returnstring = NULL;
-	gchar *headers = NULL;
-	gchar *next_event;
-	gboolean first = TRUE;
-	guint timeout;
-	
-	if (channels != NULL)
-	{
-		timeout = GPOINTER_TO_INT(g_hash_table_lookup(channels, channel));
-		if (timeout)
-			purple_timeout_remove(timeout);
-		g_hash_table_steal(channels, channel);
-	}
-	
-	returnstring = g_string_new("{ \"events\" : [ ");
-	
-	if (g_queue_is_empty(&queue))
-	{
-		returnstring = g_string_append(returnstring, 
-									   "{ \"type\":\"continue\" }");
-	} else {
-		while ((next_event = g_queue_pop_head(&queue)))
-		{
-			if (first)
-				first = FALSE;
-			else
-				returnstring = g_string_append_c(returnstring, ',');
-			returnstring = g_string_append(returnstring, next_event);
-			g_free(next_event);
-		}
-	}
-	
-	returnstring = g_string_append(returnstring, " ] }");
-	
-	headers = g_strdup_printf("HTTP/1.0 200 OK\r\n"
-					   "Content-type: application/json\r\n"
-					   "Content-length: %d\r\n\r\n", returnstring->len);
-	
-	write_data(channel, G_IO_OUT, headers, strlen(headers));
-	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
-	
-	g_free(headers);
-	g_string_free(returnstring, TRUE);
-	
-	disconnect_signals();
-	
-	current_seq++;
-	
-	return FALSE;
 }
 
 static void
