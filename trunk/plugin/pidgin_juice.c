@@ -50,26 +50,15 @@
 #include "get_history.c"
 #include "post_sendim.c"
 
-static gboolean
-get_resource(GString *path, GString *query, gchar **resource_out, gsize *resource_out_length)
-{
-	GString *filename = NULL;
-	gchar *json_string = NULL;
-	GIOChannel *file_channel = NULL;
-	gchar *file_contents = NULL;
-	gsize file_length = 0;
-	gchar **pairs = NULL;
+static GHashTable
+*parse_query(const gchar *query) {
 	GHashTable *$_GET = NULL;
-	gchar **pair = NULL;
+	gchar** pairs, **pair;
 	int i = 0;
-	GError *error = NULL;
-	gboolean return_code = FALSE;
-		
-	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
-		
+	
 	//Setup a php-like $_GET array (hash table)
 	$_GET = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-	pairs = g_strsplit(query->str, "&", -1);
+	pairs = g_strsplit(query, "&", -1);
 	for (i=0; pairs[i]; i++)
 	{
 		pair = g_strsplit(pairs[i], "=", 2);
@@ -81,6 +70,26 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 		g_strfreev(pair);
 	}
 	g_strfreev(pairs);
+	
+	return $_GET;
+}
+
+static gboolean
+get_resource(GString *path, GString *query, gchar **resource_out, gsize *resource_out_length)
+{
+	GString *filename = NULL;
+	gchar *json_string = NULL;
+	GIOChannel *file_channel = NULL;
+	gchar *file_contents = NULL;
+	gsize file_length = 0;
+	GHashTable *$_GET = NULL;
+	GError *error = NULL;
+	gboolean return_code = FALSE;
+		
+	purple_debug_info("pidgin_juice", "Resource path: %s.\n", path->str);
+		
+	$_GET = parse_query(query->str);
+	
 	
 	//Check for the appropriate path, or catch all to serve
 	if (g_str_equal(path->str, "/history.js"))
