@@ -35,7 +35,7 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 	escaped = g_strescape(sender, "");
 	json_node_set_string(sender_node, escaped);
 	g_free(escaped);
-	json_object_add_member(json_message, "sender", sender_node);
+	json_object_add_member(json_message, "buddyname", sender_node);
 	
 	message_node = json_node_new(JSON_NODE_VALUE);
 	escaped = g_strescape(message, "");
@@ -63,7 +63,7 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 	escaped = g_strescape(purple_account_get_username(account), "");
 	json_node_set_string(proto_username_node, escaped);
 	g_free(escaped);
-	json_object_add_member(json_message, "proto_username", proto_username_node);
+	json_object_add_member(json_message, "account_username", proto_username_node);
 	
 	json_message_node = json_node_new(JSON_NODE_OBJECT);
 	json_node_take_object(json_message_node, json_message);
@@ -74,22 +74,57 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 	output = json_generator_to_data(generator, NULL);	
 	json_node_free(json_message_node);	
 	
-	g_queue_push_tail(&queue, output);
+	events_push_to_queue(output);
 }
 
 static void
 buddy_typing_cb(PurpleAccount *account, const char *name, gpointer user_data)
 {
+	gchar *output;
 	
-	g_queue_push_tail(&queue, g_strdup("{}"));
+	output = g_strdup_printf("{ \"type\":\"typing\","
+							 "\"buddyname\":\"%s\", "
+							 "\"proto_id\":\"%s\", "
+							 "\"account_username\":\"%s\" }", name,
+							 purple_account_get_protocol_id(account),
+							 purple_account_get_username(account));
+	
+	events_push_to_queue(output);
 }
 static void 
 buddy_typing_stopped_cb(PurpleAccount *account, const char *name, gpointer user_data)
 {
+	gchar *output;
 	
-	g_queue_push_tail(&queue, g_strdup("{}"));
+	output = g_strdup_printf("{ \"type\":\"not_typing\","
+							 "\"buddyname\":\"%s\", "
+							 "\"proto_id\":\"%s\", "
+							 "\"account_username\":\"%s\" }", name,
+							 purple_account_get_protocol_id(account),
+							 purple_account_get_username(account));
+	
+	events_push_to_queue(output);
 }
 
+//static void
+//events_table_foreach_cb(gpointer key, gpointer value, gpointer user_data)
+//{
+//	write_to_client(key);
+//}
+
+static void
+events_push_to_queue(gchar *output)
+{
+	//Add the event to the queue
+	g_queue_push_tail(&queue, output);
+	
+	//Loop through the channels to return the events
+	if (channels && g_hash_table_size(channels))
+	{
+		//g_hash_table_foreach(channels, events_table_foreach_cb, NULL);		
+		g_hash_table_foreach(channels, (GHFunc)write_to_client, NULL);
+	}
+}
 
 struct _ConnectedSignals {
 	guint disconnect_timer;
