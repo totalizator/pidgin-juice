@@ -87,7 +87,7 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 		
 		type_node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_string(type_node,
-							 (flags & PURPLE_MESSAGE_SEND?"sent":"received"));
+							 (flags & PURPLE_MESSAGE_RECV?"received":"sent"));
 		json_object_add_member(json_message, "type", type_node);
 		
 		timestamp_node = json_node_new(JSON_NODE_VALUE);
