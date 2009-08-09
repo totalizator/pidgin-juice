@@ -68,6 +68,10 @@ write_to_client(GIOChannel *channel)
 		g_hash_table_steal(channels, channel);
 	}
 	
+	//Jeremy put this here in an attempt to stop the segfaulting
+	if (channel == NULL)
+		return FALSE;
+	
 	returnstring = g_string_new("{ \"events\" : [ ");
 	
 	if (g_queue_is_empty(&queue))

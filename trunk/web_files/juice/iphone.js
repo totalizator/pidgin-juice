@@ -1,12 +1,60 @@
+function buddy_reset_unread(buddy) {
+	buddy.unread_count = 0;
+	if(buddy.li.firstChild.tagName == 'SPAN')
+		buddy.li.removeChild(buddy.li.firstChild);
+}
+function buddy_add_unread(buddy) {
+	if (buddy.unread_count == undefined)
+		buddy.unread_count = 0;
+	buddy.unread_count++;
+
+	//if this is the first unread, add the span
+	var span;
+	if(buddy.li.firstChild.tagName != 'SPAN') {
+		span = document.createElement('span');
+		buddy.li.insertBefore(span, buddy.li.firstChild);
+	}
+	else {
+		span = buddy.li.firstChild;
+	}
+	span.innerHTML = ' ('+buddy.unread_count+')';
+	span.style.color = 'red';
+	span.style.float = "left";
+}
+function buddy_receive_message(buddy, message) {
+	buddy = get_buddy_from_collection(buddy);
+	var chat = document.getElementById('chat');
+	var lis = chat.getElementsByTagName('ul')[0];
+	var current_chat_buddy = false;
+	if (chat.buddy != undefined)
+		current_chat_buddy = get_buddy_from_collection(chat.buddy);
+	if(buddy.history == undefined)
+		buddy.history = [];
+	buddy.history.unshift(message);
+	if (buddy == current_chat_buddy) {
+		li = document.createElement('li');
+		li.className = message.type;
+		li.innerHTML = message.message;
+		lis.appendChild(li);
+		//lis.scrollTop = lis.scrollHeight;
+		scrollTo(0,10000);
+		if(getStyle(document.getElementById('chat'), "display") == 'block') {
+			return;
+		}
+	}
+	if(message.type == "received")
+		buddy_add_unread(buddy);
+}
 function get_events_callback(responseText) {
 	var json = eval("(" + responseText + ")");
 	var events = json.events;
-	var chat = document.getElementById('chat');
-	var lis = chat.getElementsByTagName('ul')[0];
-	var current_chat_buddy = get_buddy_from_collection(chat.buddy);
+	setTimeout(get_events, 1000);
 	for(i=0; i<events.length; i++) {
 		if (events[i] == undefined || events[i].type == undefined)
 			continue;
+		type = events[i].type;
+		if (type == "sent")
+			type = "received";
 		switch (events[i].type) {
 			case "sent" : 
 			case "received" : {
@@ -15,20 +63,13 @@ function get_events_callback(responseText) {
 					alert("no such buddy "+events[i].buddyname);
 					continue;
 				}
-				buddy.history.unshift(events[i]);
-				if (buddy == current_chat_buddy) {
-					li = document.createElement('li');
-					li.className = events[i].type;
-					li.innerHTML = events[i].message;
-					lis.appendChild(li);
-					//lis.scrollTop = lis.scrollHeight;
-					scrollTo(0,10000);
-				}
+				buddy_receive_message(buddy, events[i]);
 				break;
 			}
 		}
 	}
-	setTimeout(get_events, 10);
+	//called earlier in case of error
+	//setTimeout(get_events, 1000);
 }
 function get_events() {
 	ajax_get('/events.js', get_events_callback);
@@ -36,7 +77,7 @@ function get_events() {
 function newline_or_send(event) {
 	if (event.keyCode != 10 && event.keyCode != 13)
 		return true;
-	
+	alert(event.shiftKey);
 	if (!event.shiftKey) {
 		send_message();
 		return false;
@@ -96,6 +137,7 @@ function show_chat(buddy) {
 	var chats = document.getElementById('chats');
 	
 	//chats.getElementsByTagName('ul')[0].appendChild(buddy.li);
+	buddy_reset_unread(buddy);
 
 	chat.buddy = buddy;
 	chat.getElementsByTagName('h1')[0].innerHTML = buddy.display_name;
@@ -108,7 +150,7 @@ function show_chat(buddy) {
 	
 	//show chat history
 	change_page('chat');
-	chat.getElementsByTagName('textarea')[0].focus();
+	//chat.getElementsByTagName('textarea')[0].focus();scrollTo(0, 10000);
 }
 function get_buddy_history(buddy) {
 	if (buddy===undefined)
@@ -168,11 +210,11 @@ function change_page(to, direction) {
 			current_node = node;
 	}
 	if (current_node == false)
-		return;
+		return false;
 	if (typeof(to) == "string")
 		to = document.getElementById(to);
 	if (to == undefined)
-		return;
+		return current_node;
 		
 	current_node.style.display = 'none';
 	to.style.display = 'block';
@@ -193,7 +235,8 @@ function update_buddies(buddies) {
 	var buddies = json.buddies;
 	
 	if(!buddies.length) {
-		buddies_update_timeout = setTimeout(get_buddies, 1000);
+		clearTimeout(update_buddies_timeout);
+		update_buddies_timeout = setTimeout(get_buddies, 1000);
 		return;
 	}
 	
@@ -240,7 +283,7 @@ function update_buddies(buddies) {
 	}
 	*/
 	
-	buddies_update_timeout = setTimeout(get_buddies, 5000);
+	update_buddies_timeout = setTimeout(get_buddies, 5000);
 }
 function create_buddy(buddy) {
 	a = document.createElement('A');
