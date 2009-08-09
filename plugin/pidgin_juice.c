@@ -375,7 +375,7 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	if (err != NULL)
 		purple_debug_info("pidgin_juice", "Error: %s\n", err->message);
 	
-	if (ret == G_IO_STATUS_ERROR)
+	if (ret == G_IO_STATUS_ERROR && err)
 		purple_debug_error("pidgin_juice", "Error writing: (%u) %s\n", err->code, err->message);
 	else
 		g_io_channel_flush(gio, NULL);
