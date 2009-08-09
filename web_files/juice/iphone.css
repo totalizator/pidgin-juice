@@ -5,8 +5,23 @@ body {
     color: #000000;
     overflow: hidden;
     -webkit-text-size-adjust: none;
+    padding:0;
+    margin:0;
 }
-
+body > div {
+    display: none;
+    min-height: 416px;
+    background-color:white;
+    margin:0;
+    padding:0;
+    position:relative;
+}
+body > div {
+	height: 416px;
+}
+body > *[selected="true"] {
+    display: block;
+}
 body > div > h1 {
     box-sizing: border-box;
     margin: 0;
@@ -19,7 +34,7 @@ body > div > h1 {
     text-overflow: ellipsis;
     color: #FFFFFF;
     background: url(iPhoneToolbar.png) #6d84a2 repeat-x;
-    border-bottom: 1px solid #2d3642;
+    /*border-bottom: 1px solid #2d3642;*/
 }
 
 .button {
@@ -47,32 +62,16 @@ body > div > h1 {
     border-width: 0 8px 0 14px;
 }
 
-.goButton {
-    -webkit-border-image: url(iPhoneGoButton.png) 0 5 0 5;
-    border-width: 0 5px;
-}
-
 body > div > div,
 body > div > form,
 body > div > ul {
-    //position: absolute;
     left: 0;
     width: 100%;
     margin: 0;
     padding: 0;
-    height: 100%;
 }
 
-body > div {
-    display: none;
-    min-height: 416px;
-}
-
-body > *[selected="true"] {
-    display: block;
-}
-
-body > div > ul > li {
+body > div#contacts > ul > li {
     margin: 0;
     border-bottom: 1px solid #E0E0E0;
     padding: 0;
@@ -92,32 +91,76 @@ body > div > ul > li > a.away {
 	color: grey;
 	font-style: italic;
 }
-    
-.panel {
-    box-sizing: border-box;
-    padding: 10px;
-    background: #c8c8c8 url(pinstripes.png);
-}
 
-#chat > div {
-	bottom: 0;
+#chat {
+	background: url(/background_send_bar.png) bottom left repeat-x;
+}
+#chat > ul {
+	display: block;
+	list-style-type: none;
+}
+#chat > ul {
+	height: 281px;
+	overflow:scroll;
+}
+#chat > div#send_bar {
 	height: 65px;
 	width: 220px;
-	background: transparent url(/background_send_bar_full.png) no-repeat top center;
+	/**/
+	-webkit-border-image: url(/background_send_bar_full_no_button.png) 15 85 15 15 / 15px 85px 15px 15px stretch stretch;
+	/**
+	border: 15px solid black;
+	/**/
 	margin: 0 auto;
-	padding-top: 15px;
-	padding-right: 85px;
-	padding-bottom: 15px;
-	padding-left: 15px;
+	padding-right:;
 }
-
-#chat > div > #send_bar {
+/**/
+body.landscape #chat > div#send_bar {
+	width: 380px;
+}
+/**/
+#chat > div#send_bar > a {
 	display: block;
-	height: 100%;
+	background-image: url(send.png);
+	width: 62px;
+	height: 26px;
+	/*margin: auto 7px 7px auto;*/
+	margin:0; padding:0;
+	margin-top: 47px;
+	margin-right: -85px;
+	color: transparent;
+	float: right;
+}
+/**/
+
+#chat > div#send_bar textarea {
+	display: block;
+	height: 75px;
+	width: 220px;
 	margin: 0;
+	border: 0 none transparent;
+	margin:;
+	background: transparent;
 }
 
-/************************************************************************************************/
+#chat > ul > li {
+	left: 0;
+	right: auto;
+	margin: 4px auto;
+	margin-left: 0;
+	margin-right: auto;
+	min-height:33px;
+	width: 252px;
+	-webkit-border-image: url(/white_bubble.png) 15 15 17 15 / 15px 15px 17px 15px stretch stretch;
+}
+#chat > ul > li.sent {
+	-webkit-border-image: url(/green_bubble.png) 15 15 17 15 / 15px 15px 17px 15px stretch stretch;
+	left: auto;
+	right: 0;
+	margin-left: auto;
+	margin-right: 0;
+}
+
 
 .button_grey {
 	display: block;
@@ -132,51 +175,4 @@ body > div > ul > li > a.away {
 	line-height: 53px;
 	text-shadow: rgba(0, 0, 0, 0.6) 0px -1px 0;
 }
-
-/************************************************************************************************/
-
-.dialog {
-    position: absolute;
-    top: 0;
-    width: 100%;
-    min-height: 468px;
-    z-index: 2;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 0;
-    text-align: right;
-}
-
-fieldset {
-    box-sizing: border-box;
-    width: 100%;
-    margin: 0;
-    border: none;
-    padding: 10px 6px;
-    background: url(iPhoneToolbar.png) #7388a5 repeat-x;
-}
-
-fieldset > h1 {
-    margin: 0 10px 0 10px;
-    padding: 0;
-    font-size: 20px;
-    font-weight: bold;
-    color: #FFFFFF;
-    text-shadow: rgba(0, 0, 0, 0.6) 0px -1px 0;
-    text-align: center;
-}
-
-label {
-    position: absolute;
-    margin: 14px 0 0 6px;
-    font-size: 14px;
-    color: #BBBBBB;
-}
-
-input {
-    box-sizing: border-box;
-    width: 100%;
-    margin: 6px 0 0 0;
-    padding: 6px 6px 6px 44px;
-    font-size: 16px;
-    font-weight: normal;
-}
+/*******/

@@ -40,7 +40,6 @@ function get_buddy_history(buddy) {
 function update_buddy_history(response) {
 	//eval("var json = " + response);
 	var json = eval("(" + response + ")");
-	alert(response);
 	buddy = get_buddy_from_collection(json.buddyname, json.proto_id, json.proto_username);
 	//testing
 	buddy.history_test = "test";
@@ -51,15 +50,20 @@ function update_buddy_history(response) {
 function update_chat_with_history() {
 	var chat = document.getElementById('chat');
 	var ul = chat.getElementsByTagName('ul')[0];
+	while(ul.childNodes.length > 0)
+		ul.removeChild(ul.firstChild);
 	var earliest_message = ul.childNodes.length ? ul.childNodes[0] : false;
 	for(i=chat.buddy.history.length-1; i>=0; i--) {
 		li = document.createElement('LI');
+		if (chat.buddy.history[i].type == "sent")
+			li.className = "sent";
 		li.innerHTML = chat.buddy.history[i].message;
 		if (earliest_message)
 			ul.insertBefore(li, earliest_message);
 		else
 			ul.appendChild(li);
 	}
+	ul.scrollTop = ul.scrollHeight;
 }
 function show_contact(buddy) {
 	var contact = document.getElementById('contact');
@@ -253,22 +257,26 @@ function ajax_get(page, func)
 
 }
 
-var currentWidth = 0;
 addEventListener("load", function(event)
 {
-    setInterval(checkOrientAndLocation, 300);
-    setTimeout(scrollTo, 0, 0, 1);
-    setTimeout(get_buddies, 300);
+	//Uncomment this to enable landscape mode
+	//setTimeout(checkOrientAndLocation, 300);
+	setTimeout(scrollTo, 0, 0, 1);
+	setTimeout(get_buddies, 300);
 }, false);
+var currentWidth = 0;
 function checkOrientAndLocation()
 {
-    if (window.outerWidth != currentWidth)
-    {
-        currentWidth = window.outerWidth;
+	if (window.innerWidth != currentWidth)
+	{
+		currentWidth = window.innerWidth;
 
-        var orient = currentWidth == 320 ? "profile" : "landscape";
-        document.body.setAttribute("orient", orient);
-    }
+		var orient = currentWidth == 320 ? "profile" : "landscape";
+		document.body.setAttribute("orient", orient);
+		document.body.className = orient;
+		scrollTo(0,1);
+	}
+	setTimeout(checkOrientAndLocation, 300);
 }
 
 function setup_page() {
@@ -309,7 +317,7 @@ function checkOrientAndLocation()
         var orient = currentWidth == 320 ? "profile" : "landscape";
         document.body.setAttribute("orient", orient);
     }
-
+		
     if (location.hash != currentHash)
     {
         currentHash = location.hash;
@@ -326,6 +334,7 @@ function checkOrientAndLocation()
             showPage(page, backwards);
         }
     }
+    
 }
     
 function showPage(page, backwards)
