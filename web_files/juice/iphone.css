@@ -142,7 +142,7 @@ body.landscape #chat > div#send_bar {
 	width: 220px;
 	margin: 0;
 	border: 0 none transparent;
-	margin:-10px;
+	margin:-5px;
 	background: transparent;
 	outline: 0 none transparent;
 }
