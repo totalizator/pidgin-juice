@@ -1,5 +1,4 @@
 function get_events_callback(responseText) {
-	alert(responseText);
 	var json = eval("(" + responseText + ")");
 	var events = json.events;
 	var chat = document.getElementById('chat');
@@ -118,7 +117,6 @@ function get_buddy_history(buddy) {
 	ajax_get(url, update_buddy_history);
 }
 function update_buddy_history(response) {
-	alert(response);
 	var json = eval("(" + response + ")");
 	buddy = get_buddy_from_collection(json.buddyname, json.proto_id, json.account_username);
 	buddy.history = json.history;
