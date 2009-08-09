@@ -46,7 +46,7 @@
 				<!---->
 				<a href="#" onclick="send_message();">Send</a>
 				<!---->
-				<textarea></textarea>
+				<textarea onkeypress="if(event.keyCode == 10) {send_message(); return false;}"></textarea>
 				<!---->
 			</div>
 			<!---->
