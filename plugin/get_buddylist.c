@@ -84,6 +84,15 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		proto_id = purple_account_get_protocol_id(account);
 		proto_name = purple_account_get_protocol_name(account);
 		account_username = purple_account_get_username(account);
+			
+		/*prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	if (prpl_info->list_icon == NULL)
+		return NULL;
+
+	protoname = prpl_info->list_icon(account, NULL);
+	if (protoname == NULL)
+		return NULL;
+*/
 		
 		// Set the json nodes
 		if (display_name != NULL)
