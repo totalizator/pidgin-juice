@@ -170,6 +170,13 @@ body.landscape #chat > div#send_bar {
 	margin-right: 0;
 }
 
+#contact > img {
+	display: block;
+	margin: 5px; auto;
+}
+#contact > div {
+	padding: 5px;
+}
 
 .button_grey {
 	display: block;

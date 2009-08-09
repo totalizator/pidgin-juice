@@ -318,6 +318,6 @@ juice_GET_events(GIOChannel *channel)
 		channels = g_hash_table_new_full(NULL, NULL, NULL, NULL);
 	
 	//Otherwise, store up the channel
-	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
+	timeout = purple_timeout_add_seconds(5, (GSourceFunc)write_to_client, channel);
 	g_hash_table_insert(channels, channel, GINT_TO_POINTER(timeout));
 }
