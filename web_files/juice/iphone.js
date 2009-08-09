@@ -9,15 +9,6 @@ function send_message() {
 	var message = textarea.value;
 	textarea.value = "";
 	
-	var json = '';
-	json += '{';
-	json += ' "username" : "'+buddy.username+'"';
-	json += ' , "proto_id" : "'+buddy.proto_id+'"';
-	json += ' , "account_username" : "'+buddy.account_username+'"';
-	json += ' , "message" : "'+message.replace(/"/g, '\\"')+'"';
-	json += ' }';
-	//alert(json);
-	
 	page += '?';
 	page += 'username='+buddy.username;
 	page += '&proto_id='+buddy.proto_id;
@@ -30,7 +21,7 @@ function send_message() {
 	//When server is updated, remove the get component
 	
 	//Should these all be url encoded? if so, who will decode them? if not, extra & and = will split it apart!;
-	ajax_post(page, json, send_message_callback);
+	ajax_post(page, "", send_message_callback);
 }
 function alert_buddy(buddy) {
 	s = "";
