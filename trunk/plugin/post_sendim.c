@@ -34,6 +34,7 @@ juice_POST_sendim(const gchar *buddyname, const gchar *proto_id, const gchar *pr
 	gint result;
 	gchar *return_string;
 	const gchar *reason;
+	PurpleConversation *conv;
 	
 	if (!buddyname || !proto_id || !proto_username)
 	{
@@ -43,22 +44,16 @@ juice_POST_sendim(const gchar *buddyname, const gchar *proto_id, const gchar *pr
 	}
 	
 	account = purple_accounts_find(proto_username, proto_id);
-	result = serv_send_im(purple_account_get_connection(account), buddyname, message, PURPLE_MESSAGE_SEND);
-	
-	if (result < 0)
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
+													buddyname, account);
+	if (conv == NULL)
 	{
-		if (result == -E2BIG)
-			reason = "too_big";
-		else if (result == -ENOTCONN)
-			reason = "not_connected";
-		else
-			reason = "";
-		//Failed
-		return_string = g_strdup_printf("{ \"message_sent\" : 0, \"reason\" : \"%s\" }", reason);
-	} else {
-		return_string = g_strdup("{ \"message_sent\" : 1 }");
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, buddyname);
 	}
+	purple_conv_im_send(PURPLE_CONV_IM(conv), message);
 	
+	return_string = g_strdup("{ \"message_sent\" : 1 }");
+
 	if (length != NULL)
 		*length = strlen(return_string);
 	

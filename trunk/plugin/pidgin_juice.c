@@ -116,21 +116,10 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	}
 	else if (g_str_equal(path->str, "/buddy_icon.png"))
 	{
-		//Temporary assignments for debugging purposes only. The memory is already allocated and will continue to be used.
-		file_contents = (gchar *)g_hash_table_lookup($_GET, "buddyname");
-		file_contents = (gchar *)g_hash_table_lookup($_GET, "proto_id");
-		file_contents = (gchar *)g_hash_table_lookup($_GET, "proto_username");
-		
 		*resource_out = NULL;
 		*resource_out_length = 0;
 		
-		//I need the length from this also, as it is binary data, not string safe
-		//file_contents = juice_GET_buddyicon((gchar *)g_hash_table_lookup($_GET, "buddyname"),
-		//									(gchar *)g_hash_table_lookup($_GET, "proto_id"),
-		//									(gchar *)g_hash_table_lookup($_GET, "proto_username"),
-		//										&file_length);
 		file_contents = juice_GET_buddyicon($_GET, &file_length);
-		//purple_debug_info("purple_juice", "buddy_icon_data address3: %s \n", file_contents);
 		if (file_contents == NULL)
 		{
 			return_code = FALSE;
@@ -316,19 +305,19 @@ process_request(GString *request_string, gchar **reply_out, gsize *reply_out_len
 	/* turn reply string into binary data */
 	//g_string_append(reply_string, resource);
 
-	*reply_out_length = resource_length + strlen(reply_string->str);	
-	*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (*reply_out_length));
+	*reply_out_length = resource_length + reply_string->len;	
+	*reply_out = (gchar *)g_malloc0(sizeof(gchar) * (*reply_out_length+1));
 	
-	memcpy(*reply_out, reply_string->str, strlen(reply_string->str)+1);
-	memcpy((*reply_out)+strlen(reply_string->str), resource, resource_length);
+	memcpy(*reply_out, reply_string->str, reply_string->len);
+	memcpy((*reply_out)+reply_string->len, resource, resource_length);
 	//memcpy((*reply_out), resource, resource_length);
 	//purple_debug_info("pidgin_juice", "reply string1: %d\n", *reply_out_length);
 	//return TRUE;
-	g_string_free(reply_string, TRUE);
 	
-	purple_debug_info("pidgin_juice", "reply string: %s\n", *reply_out);
+	purple_debug_info("pidgin_juice", "reply string: %*s\n", *reply_out_length, *reply_out);
 	//purple_debug_info("pidgin_juice", "resource: %s\n", resource);
 	
+	g_string_free(reply_string, TRUE);
 	g_string_free(uri, TRUE);
 	
 	g_string_free(path, TRUE);
@@ -407,10 +396,13 @@ read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
 	
 	write_data(channel, condition, reply, reply_length);
 	
+	
 	//Free resources allocated in this function
 	g_string_free(request_string, TRUE);
 	g_string_free(request_buffer, TRUE);
+	purple_debug_info("pidgin_juice", "2 frees.\n");
 	g_free(reply);
+	purple_debug_info("pidgin_juice", "3rd free.\n");
 	
 	return TRUE;
 }

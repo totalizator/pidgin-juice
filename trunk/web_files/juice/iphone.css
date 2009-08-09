@@ -138,12 +138,13 @@ body.landscape #chat > div#send_bar {
 
 #chat > div#send_bar textarea {
 	display: block;
-	height: 75px;
+	height: 70px;
 	width: 220px;
 	margin: 0;
 	border: 0 none transparent;
-	margin:;
+	margin:-10px;
 	background: transparent;
+	outline: 0 none transparent;
 }
 
 #chat > ul > li {

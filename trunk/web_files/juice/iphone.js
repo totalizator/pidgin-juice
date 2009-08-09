@@ -1,3 +1,6 @@
+function send_message_callback(responseText) {
+	get_buddy_history();
+}
 function send_message() {
 	var page = '/send_im.js';
 	var chat = document.getElementById('chat');
@@ -13,21 +16,21 @@ function send_message() {
 	json += ' , "account_username" : "'+buddy.account_username+'"';
 	json += ' , "message" : "'+message.replace(/"/g, '\\"')+'"';
 	json += ' }';
-	alert(json);
+	//alert(json);
 	
 	page += '?';
 	page += 'username='+buddy.username;
 	page += '&proto_id='+buddy.proto_id;
 	page += '&account_username='+buddy.account_username;
 	page += '&message='+escape(message)
-	alert(page);
+	//alert(page);
 	
 	//This is currently using both POST and GET. Probably only the GET values are
 	//being read server-side.
 	//When server is updated, remove the get component
 	
 	//Should these all be url encoded? if so, who will decode them? if not, extra & and = will split it apart!;
-	ajax_post(page, json, function(text){alert('done');alert(text);});
+	ajax_post(page, json, send_message_callback);
 }
 function alert_buddy(buddy) {
 	s = "";
@@ -68,6 +71,8 @@ function show_chat(buddy) {
 	change_page('chat');
 }
 function get_buddy_history(buddy) {
+	if (buddy===undefined)
+		buddy = document.getElementById('chat').buddy;
 	url = '/history.js?buddyname='+buddy.username+'&proto_id='+buddy.proto_id+'&proto_username='+buddy.account_username;
 	ajax_get(url, update_buddy_history);
 }
@@ -144,7 +149,6 @@ function buddy_sort_callback(a, b) {
 }
 var update_buddies_timeout = false;
 function update_buddies(buddies) {
-	clearTimeout(update_buddies_timeout);
 	
 	//eval("var json="+buddies+";");
 	var json = eval("(" + buddies + ")");
@@ -156,6 +160,7 @@ function update_buddies(buddies) {
 	
 	var lis = document.getElementById('contacts').getElementsByTagName('UL');
 	var buddylist = lis[lis.length-1];
+	
 	for (var i=0; i<buddies.length; i++)
 	{
 		buddy = buddies[i];
@@ -171,26 +176,29 @@ function update_buddies(buddies) {
 		
 	}
 	/*
-		for(i=0; i<buddylist.childNodes.length; i++) {
-			if(buddylist.childNodes[i].style == undefined)
-				continue;
-			if (buddylist.childNodes[i].buddy.time_updated < time_updated) {
-				alert('old contact');
-				b=buddylist.childNodes[i].buddy;
-				g=buddylist[b.username];
-				for(j=0; j <g.length; j++){
-					if(g[j] == b) {
-						if (j == g.length-1)
-							buddylist[b.username] = g.slice(0, j);
-						else
-							buddylist[b.username] = g.slice(0, j).concat(g.slice(j+1));
-						break;
-					}
+	for(i=0; i<buddylist.childNodes.length; i++) {
+		if(buddylist.childNodes[i].style == undefined)
+			continue;
+		if (buddylist.childNodes[i].buddy.time_updated < time_updated) {
+			alert('old contact');
+			b=buddylist.childNodes[i].buddy;
+			g=buddylist[b.username];
+			for(j=0; j <g.length; j++){
+				if(g[j] == b) {
+					if (j == g.length-1)
+						buddylist[b.username] = g.slice(0, j);
+					else
+						buddylist[b.username] = g.slice(0, j).concat(g.slice(j+1));
+					break;
 				}
 			}
 		}
-		*/
-	buddies_update_timeout = setTimeout(get_buddies, 5000);
+	}
+	*/
+	if (buddylist.childNodes.length)
+		buddies_update_timeout = setTimeout(get_buddies, 5000);
+	else
+		buddies_update_timeout = setTimeout(get_buddies, 1000);
 }
 function create_buddy(buddy) {
 	a = document.createElement('A');
@@ -256,6 +264,7 @@ function get_buddy_from_collection(username, proto_id, account_username) {
 	return existing_buddy;
 }
 function get_buddies() {
+	clearTimeout(update_buddies_timeout);
 	ajax_get("buddies_list.js", update_buddies);
 }
 function ajax_post(page, post_string, func) {		
