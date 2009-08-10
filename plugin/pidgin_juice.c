@@ -27,24 +27,25 @@
 #define PURPLE_PLUGINS
 #endif
 
-#include "internal.h"
 
 #include <string.h>
 
 #include "connection.h"
 #include "core.h"
 #include "debug.h"
-#include "gtkblist.h"
-#include "gtkutils.h"
 #include "notify.h"
-#include "pidginstock.h"
 #include "prefs.h"
 #include "util.h"
 #include "version.h"
 
-#include "pidgin.h"
-
-#include "winsock2.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 
 static gboolean write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length);
 
@@ -167,7 +168,9 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	{
 		purple_debug_info("pidgin_juice", "Serving physical file\n");
 		filename = g_string_new(NULL);
+		gchar *DATADIR = g_get_current_dir();
 		g_string_append_printf(filename, "%s%s%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "juice", G_DIR_SEPARATOR_S, path->str+1);
+		g_free(DATADIR);
 		purple_debug_info("pidgin_juice", "filename: %s\n", filename->str);
 		
 		file_channel = g_io_channel_new_file(filename->str, "r", NULL);
@@ -590,14 +593,14 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
 	"pidgin_juice",                                     /**< id             */
-	N_("Pidgin Juice"),                       /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
+	"Pidgin Juice",                       /**< name           */
+	"1.0",                                  /**< version        */
 	                                                  /**  summary        */
-	N_("Allows remote use of Pidgin accounts remotely."),
+	"Allows remote use of Pidgin accounts remotely.",
 	                                                  /**  description    */
-	N_("Allows remote use of Pidgin accounts remotely."),
+	"Allows remote use of Pidgin accounts remotely.",
 	"Eion Robb, Jeremy Lawson",          /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
+	"http://www.pidginjuice.com/",                                     /**< homepage       */
 
 	plugin_load,                                      /**< load           */
 	plugin_unload,                                             /**< unload         */
