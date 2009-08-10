@@ -122,62 +122,22 @@ events_push_to_queue(gchar *output)
 	}
 }
 static void
-received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
+received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 				   PurpleConversation *conv, PurpleMessageFlags flags,
 				   gpointer user_data)
 {
 	gchar *output;
-	JsonObject *json_message;
-	JsonNode *json_message_node;
-	JsonNode *sender_node, *message_node, *timestamp_node, *type_node;
-	JsonNode *proto_id_node, *proto_username_node;
-	gchar *escaped = NULL;
-	JsonGenerator *generator = NULL;
-	
-	json_message = json_object_new();
-	
-	sender_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(sender, "");
-	json_node_set_string(sender_node, escaped);
-	g_free(escaped);
-	json_object_add_member(json_message, "buddyname", sender_node);
-	
-	message_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(message, "");
-	json_node_set_string(message_node, escaped);
-	g_free(escaped);
-	json_object_add_member(json_message, "message", message_node);
-	
-	type_node = json_node_new(JSON_NODE_VALUE);
-	json_node_set_string(type_node,
-						 (flags & PURPLE_MESSAGE_RECV?"received":"sent"));
-	json_object_add_member(json_message, "type", type_node);
-	
-	timestamp_node = json_node_new(JSON_NODE_VALUE);
-	json_node_set_int(timestamp_node, 
-					  time(NULL));
-	json_object_add_member(json_message, "timestamp", timestamp_node);
-	
-	proto_id_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(purple_account_get_protocol_id(account), "");
-	json_node_set_string(proto_id_node, escaped);
-	g_free(escaped);
-	json_object_add_member(json_message, "proto_id", proto_id_node);
-	
-	proto_username_node = json_node_new(JSON_NODE_VALUE);
-	escaped = g_strescape(purple_account_get_username(account), "");
-	json_node_set_string(proto_username_node, escaped);
-	g_free(escaped);
-	json_object_add_member(json_message, "account_username", proto_username_node);
-	
-	json_message_node = json_node_new(JSON_NODE_OBJECT);
-	json_node_take_object(json_message_node, json_message);
-	
-	generator = json_generator_new();
-	json_generator_set_root(generator, json_message_node);
-	
-	output = json_generator_to_data(generator, NULL);	
-	json_node_free(json_message_node);	
+	output = g_strdup_printf("{ \"type\":\"received\","
+							 "\"message\":\"%s\", "
+							 "\"buddyname\":\"%s\", "
+							 "\"proto_id\":\"%s\", "
+							 "\"account_username\":\"%s\", "
+							 "\"timestamp\":%d }",
+							 message,
+							 buddyname,
+							 purple_account_get_protocol_id(account),
+							 purple_account_get_username(account),
+							 time(NULL));
 	
 	events_push_to_queue(output);
 }
@@ -191,14 +151,15 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\" }",
+							 "\"account_username\":\"%s\", "
+							 "\"timestamp\":%d }",
 							 message,
 							 buddyname,
 							 purple_account_get_protocol_id(account),
-							 purple_account_get_username(account));
+							 purple_account_get_username(account),
+							 time(NULL));
 	
 	events_push_to_queue(output);
-	//received_im_msg_cb(account, sender, message, conv, flags, user_data);
 }
 
 static void
@@ -216,14 +177,14 @@ buddy_typing_cb(PurpleAccount *account, const char *name, gpointer user_data)
 	events_push_to_queue(output);
 }
 static void 
-buddy_typing_stopped_cb(PurpleAccount *account, const char *name, gpointer user_data)
+buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer user_data)
 {
 	gchar *output;
 	
 	output = g_strdup_printf("{ \"type\":\"not_typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\" }", name,
+							 "\"account_username\":\"%s\" }", buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account));
 	
