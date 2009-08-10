@@ -41,6 +41,9 @@ juice_GET_buddylist(const GHashTable *$_GET)
 	JsonGenerator *generator;
 	JsonNode *return_blist_node;
 	PurpleBlistNode *purple_blist_node;
+	PurplePluginProtocolInfo *prpl_info;
+	const gchar *prpl_icon;
+	JsonNode *prpl_icon_node;
 	
 	return_blist = json_object_new();
 	json_buddies = json_array_new();
@@ -85,14 +88,11 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		proto_name = purple_account_get_protocol_name(account);
 		account_username = purple_account_get_username(account);
 			
-		/*prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	if (prpl_info->list_icon == NULL)
-		return NULL;
-
-	protoname = prpl_info->list_icon(account, NULL);
-	if (protoname == NULL)
-		return NULL;
-*/
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_find_prpl(proto_id));
+		if (prpl_info->list_icon)
+			prpl_icon = prpl_info->list_icon(account, NULL);
+		else
+			prpl_icon = NULL;
 		
 		// Set the json nodes
 		if (display_name != NULL)
@@ -107,6 +107,13 @@ juice_GET_buddylist(const GHashTable *$_GET)
 			buddyname_node = json_node_new(JSON_NODE_VALUE);
 			json_node_set_string(buddyname_node, buddyname);
 			json_object_add_member(json_buddy, "buddyname", buddyname_node);
+		}
+		
+		if (prpl_icon != NULL)
+		{
+			prpl_icon_node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(prpl_icon_node, prpl_icon);
+			json_object_add_member(json_buddy, "prpl_icon", prpl_icon_node);
 		}
 		
 		available_node = json_node_new(JSON_NODE_VALUE);
