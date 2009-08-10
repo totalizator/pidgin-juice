@@ -96,6 +96,10 @@ body > div > ul > li > a.away {
 body > div > ul > li > span {
 	padding: 8px 8px 8px 8px;
 }
+body > div > ul > li > img {
+	margin: 8px 32px 8px 8px;
+	float:right;
+}
 
 #chat {
 	background: url(/background_send_bar.png) bottom left repeat-x;
@@ -142,14 +146,15 @@ body.landscape #chat > div#send_bar {
 
 #chat > div#send_bar textarea {
 	display: block;
-	height: 70px;
-	width: 220px;
+	height: ;
+	width: 190px;
 	margin: 0;
 	border: 0 none transparent;
-	margin:-5px;
+	margin:0px;
+	margin-left: -10px;
 	background: transparent;
 	outline: 0 none transparent;
-	font-size: 20px;
+	font-size: 16px;
 }
 
 #chat > ul > li {
