@@ -46,7 +46,7 @@ function buddy_receive_message(buddy, message) {
 		buddy_add_unread(buddy);
 }
 function get_events_callback(responseText) {
-	alert(responseText);
+	//alert(responseText);
 	var json = eval("(" + responseText + ")");
 	var events = json.events;
 	//setTimeout(get_events, 1000);
@@ -260,6 +260,9 @@ function update_buddies(buddies) {
 	var lis = document.getElementById('contacts').getElementsByTagName('UL');
 	var buddylist = lis[lis.length-1];
 	
+	buddies_collection_old = buddies_collection;
+	buddies_collection_new = [];
+	to_add = [];
 	for (var i=0; i<buddies.length; i++)
 	{
 		buddy = buddies[i];
@@ -267,20 +270,18 @@ function update_buddies(buddies) {
 		if (!existing_buddy)
 		{
 			existing_buddy = buddy = create_buddy(buddy);
-			add_buddy_to_collection(buddy);
+			to_add.push(buddy);
 			buddylist.appendChild(buddy.li);
 		}
 		update_buddy(existing_buddy,buddy);
 		buddy.time_updated = time_updated;
-		
 	}
+	buddies_collection = buddies_collection_new;
 	
-	/* remove contacts that aren't in the list
-	for(i=0; i<buddylist.childNodes.length; i++) {
-		if(buddylist.childNodes[i].style == undefined)
-			continue;
+	/* remove contacts that aren't in the list *
+	for(i=0; i<buddies_collection.length; i++) {
+		for(j in buddies_collection[i]) {
 		if (buddylist.childNodes[i].buddy.time_updated < time_updated) {
-			alert('old contact');
 			b=buddylist.childNodes[i].buddy;
 			g=buddylist[b.buddyname];
 			for(j=0; j <g.length; j++){
@@ -294,9 +295,9 @@ function update_buddies(buddies) {
 			}
 		}
 	}
-	*/
+	/**/
 	
-	update_buddies_timeout = setTimeout(get_buddies, 5000);
+	update_buddies_timeout = setTimeout(get_buddies, 60000);
 }
 function create_buddy(buddy) {
 	a = document.createElement('A');
@@ -304,7 +305,10 @@ function create_buddy(buddy) {
 	a.innerHTML = buddy.display_name;
 	a.onclick = function() {show_contact(buddy); return false;};
 	a.onclick = function() {show_chat(buddy); return false;};
+	img = document.createElement('IMG');
+	img.src = '/protocol/'+buddy.proto_id.replace(/prpl-/, '')+'.png';
 	li = document.createElement('LI');
+	li.appendChild(img);
 	li.appendChild(a);
 	li.a=a;
 	li.buddy = buddy;
@@ -312,6 +316,9 @@ function create_buddy(buddy) {
 	return buddy;
 }
 function update_buddy(buddy_old, buddy_new) {
+	buddy_old.available = buddy_new.available;
+	buddy_old.display_name = buddy_new.display_name;
+	buddy_old.status_message = buddy_new.status_message;
 	li = buddy_old.li;
 	li.a.innerHTML = buddy_new.display_name;
 	if(buddy_new.available)
