@@ -139,12 +139,12 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%d }",
+							 "\"timestamp\":%lu }",
 							 message,
 							 buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
-							 time(NULL));
+							 (gulong)time(NULL));
 	
 	events_push_to_queue(output);
 }
@@ -159,12 +159,12 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%d }",
+							 "\"timestamp\":%lu }",
 							 message,
 							 buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
-							 time(NULL));
+							 (gulong)time(NULL));
 	
 	events_push_to_queue(output);
 }

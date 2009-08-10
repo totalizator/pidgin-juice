@@ -73,14 +73,14 @@ juice_GET_proto_icon(GHashTable *$_GET, gsize *length) {
 	protoname = prpl_info->list_icon(NULL, NULL);
 	if (protoname == NULL)
 		return NULL;
-		
+	
+/*	
 	tmp = g_strconcat(protoname, ".png", NULL);
-
 	filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols",
 				    "16",
 				    tmp, NULL);
 	g_free(tmp);
-		
+*/	
 	g_file_get_contents(filename, &file_contents, &file_length, &error);
 	
 	purple_debug_info("pidgin_juice", "protocol image length: %d\n", file_length);
