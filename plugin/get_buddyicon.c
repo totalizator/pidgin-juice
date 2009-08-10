@@ -51,3 +51,39 @@ juice_GET_buddyicon(GHashTable *$_GET, gsize *length)
 	*length = buddy_icon_len;
 	return buddy_icon_data_copy;
 }
+static gchar *
+juice_GET_proto_icon(GHashTable *$_GET, gsize *length) {
+	const gchar *proto_id = NULL;
+	const PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info;
+	const gchar *protoname;
+	GError *error = NULL;
+	gsize file_length = 0;
+	gchar *file_contents = NULL;
+	gchar *tmp = NULL;
+	gchar *filename = NULL;
+	
+	proto_id = g_hash_table_lookup($_GET, "proto_id");
+	prpl = purple_find_prpl(proto_id);
+	
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	if (prpl_info->list_icon == NULL)
+		return NULL;
+
+	protoname = prpl_info->list_icon(NULL, NULL);
+	if (protoname == NULL)
+		return NULL;
+		
+	tmp = g_strconcat(protoname, ".png", NULL);
+
+	filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols",
+				    "16",
+				    tmp, NULL);
+	g_free(tmp);
+		
+	g_file_get_contents(filename, &file_contents, &file_length, &error);
+	
+	purple_debug_info("pidgin_juice", "protocol image length: %d\n", file_length);
+	*length = 4;
+	return g_strdup("test");
+}
