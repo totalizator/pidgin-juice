@@ -18,6 +18,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02111-1301, USA.
  */
+#ifndef G_GNUC_NULL_TERMINATED
+#  if __GNUC__ >= 4
+#    define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
+#  else
+#    define G_GNUC_NULL_TERMINATED
+#  endif /* __GNUC__ >= 4 */
+#endif /* G_GNUC_NULL_TERMINATED */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -46,6 +53,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
+
 
 static gboolean write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length);
 
@@ -191,9 +199,13 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	{
 		purple_debug_info("pidgin_juice", "Serving physical file\n");
 		filename = g_string_new(NULL);
+#ifndef DATADIR
 		gchar *DATADIR = g_get_current_dir();
+#endif
 		g_string_append_printf(filename, "%s%s%s%s%s", DATADIR, G_DIR_SEPARATOR_S, "juice", G_DIR_SEPARATOR_S, path->str+1);
+#	ifndef DATADIR
 		g_free(DATADIR);
+#	endif
 		purple_debug_info("pidgin_juice", "filename: %s\n", filename->str);
 		
 		file_channel = g_io_channel_new_file(filename->str, "r", NULL);
@@ -389,9 +401,10 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 static gboolean
 write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length)
 {
-	GIOStatus ret;
+	GIOStatus status;
 	GError *err = NULL;
 	gsize len = 0;
+	gsize bytes_written = 0;
 
 	if (condition & G_IO_HUP)
 		purple_debug_error("pidgin_juice", "Write end of pipe died!\n");
@@ -402,14 +415,22 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	g_io_channel_set_flags(gio, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_flush(gio, NULL);
 	
-	ret = g_io_channel_write_chars (gio, data, data_length, &len, &err);
+	//ret = g_io_channel_write_chars (gio, ((gchar *)data+start), data_length, &len, &err);
+	while (bytes_written < data_length)
+	{
+		status = g_io_channel_write_chars (gio, (gchar *)data + bytes_written, data_length - bytes_written, &len, &err);
+		bytes_written += len;
+	}
+	
+	
 	//DONT REMOVE THIS DEBUG.
 	//for some magical mystical reason it is the only thing ensuring the end of the buddy icon is sent
-	purple_debug_info("pidgin_juice", "wrote %d bytes\nError: %d; %d; %d; %d;\n", len, ret==G_IO_STATUS_ERROR, ret==G_IO_STATUS_NORMAL, ret==G_IO_STATUS_EOF, ret==G_IO_STATUS_AGAIN);
+	purple_debug_info("pidgin_juice", "wrote %d bytes\n", len);
+	purple_debug_info("pidgin_juice", "Error: %d; %d; %d; %d;\n", status==G_IO_STATUS_ERROR, status==G_IO_STATUS_NORMAL, status==G_IO_STATUS_EOF, status==G_IO_STATUS_AGAIN);
 	if (err != NULL)
 		purple_debug_info("pidgin_juice", "Error: %s\n", err->message);
 	
-	if (ret == G_IO_STATUS_ERROR && err)
+	if (status == G_IO_STATUS_ERROR && err)
 		purple_debug_error("pidgin_juice", "Error writing: (%u) %s\n", err->code, err->message);
 	else
 		g_io_channel_flush(gio, NULL);
