@@ -25,6 +25,8 @@ struct _ConnectedSignals {
 };
 static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0};
 
+
+
 static gboolean
 disconnect_signals_cb(gpointer data)
 {
@@ -69,8 +71,8 @@ write_to_client(GIOChannel *channel)
 	}
 	
 	//Jeremy put this here in an attempt to stop the segfaulting
-	if (channel == NULL)
-		return FALSE;
+	//if (channel == NULL)
+	//	return FALSE;
 	
 	returnstring = g_string_new("{ \"events\" : [ ");
 	
@@ -98,6 +100,7 @@ write_to_client(GIOChannel *channel)
 	
 	write_data(channel, G_IO_OUT, headers, strlen(headers));
 	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
+	g_io_channel_flush(channel, NULL);
 	
 	g_free(headers);
 	g_string_free(returnstring, TRUE);
@@ -107,6 +110,10 @@ write_to_client(GIOChannel *channel)
 	current_seq++;
 	
 	return FALSE;
+}static void
+events_table_foreach_cb(gpointer key, gpointer value, gpointer user_data)
+{
+	write_to_client(key);
 }
 static void
 events_push_to_queue(gchar *output)
@@ -117,8 +124,8 @@ events_push_to_queue(gchar *output)
 	//Loop through the channels to return the events
 	if (channels && g_hash_table_size(channels))
 	{
-		//g_hash_table_foreach(channels, events_table_foreach_cb, NULL);		
-		g_hash_table_foreach(channels, (GHFunc)write_to_client, NULL);
+		g_hash_table_foreach(channels, events_table_foreach_cb, NULL);		
+		//g_hash_table_foreach(channels, (GHFunc)write_to_client, NULL);
 	}
 }
 static void
@@ -190,12 +197,6 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	
 	events_push_to_queue(output);
 }
-
-//static void
-//events_table_foreach_cb(gpointer key, gpointer value, gpointer user_data)
-//{
-//	write_to_client(key);
-//}
 
 
 

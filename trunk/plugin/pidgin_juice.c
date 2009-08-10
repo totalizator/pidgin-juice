@@ -134,6 +134,29 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 		}
 		return_code = TRUE;
 	}
+	else if (g_str_equal(path->str, "/proto_icon.txt"))
+	{
+		*resource_out = NULL;
+		*resource_out_length = 0;
+		
+		file_contents = juice_GET_proto_icon($_GET, &file_length);
+		if (file_contents == NULL)
+		{
+			return_code = FALSE;
+		}
+		else
+		{
+			purple_debug_info("pidgin_juice", "buddy icon data file contents: %d\n", file_length);
+			//purple_debug_info("pidgin_juice", "buddy icon data file contents: %s\n", file_contents);
+			
+			*resource_out = file_contents;
+			*resource_out_length = file_length;
+			
+			//don't free this, the above assignment means it's still being used
+			//g_free(file_contents);
+			return_code = TRUE;
+		}
+	}
 	else if (g_str_equal(path->str, "/buddy_icon.png"))
 	{
 		*resource_out = NULL;
@@ -324,7 +347,15 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 		g_string_append(reply_string, "HTTP/1.0 200 OK\r\n");
 		/* set appropriate mime type */
 		if (g_strrstr(path->str, ".png") != NULL && strlen(g_strrstr(path->str, ".png")) == 4)
+		{
 			g_string_append(reply_string, "Content-type: image/png\r\n");
+			if (!g_str_equal(path->str, "/buddy_icon.png"))
+			{
+				g_string_append(reply_string, "Cache-Control: public\r\n");
+				g_string_append(reply_string, "Pragma: cache\r\n");
+				g_string_append(reply_string, "Expires: Tue, 01 Sep 2009 16:00:00 GMT\r\n");
+			}
+		}
 		if (g_strrstr(path->str, ".html") != NULL && strlen(g_strrstr(path->str, ".html")) == 5)
 			g_string_append(reply_string, "Content-type: text/html\r\n");
 		/* end mime type */
