@@ -1,3 +1,13 @@
+if (window.parseJSON == undefined)
+{
+	window.parseJSON = function(text)
+	{
+		text = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
+		return !(/[^,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/.test(
+			text.replace(/"(\\.|[^"\\])*"/g, ''))) &&
+			eval('(' + text + ')');
+	}
+}
 function buddy_reset_unread(buddy) {
 	buddy.unread_count = 0;
 	if(buddy.li.firstChild.tagName == 'SPAN')
@@ -45,11 +55,14 @@ function buddy_receive_message(buddy, message) {
 	if(message.type == "received")
 		buddy_add_unread(buddy);
 }
-function get_events_callback(responseText) {
-	//alert(responseText);
-	var json = eval("(" + responseText + ")");
+function get_events_callback(response) {
+	setTimeout(get_events, 10);
+	try {
+	var json = parseJSON(response);
+	} catch(e) {
+	  alert(e.message);
+	}
 	var events = json.events;
-	//setTimeout(get_events, 1000);
 	for(i=0; i<events.length; i++) {
 		if (events[i] == undefined || events[i].type == undefined)
 			continue;
@@ -71,7 +84,7 @@ function get_events_callback(responseText) {
 		}
 	}
 	//called earlier in case of error
-	setTimeout(get_events, 1000);
+	//setTimeout(get_events, 10);
 }
 function get_events() {
 	//alert('getting events');
@@ -172,7 +185,7 @@ function get_buddy_history(buddy) {
 	ajax_get(url, update_buddy_history);
 }
 function update_buddy_history(response) {
-	var json = eval("(" + response + ")");
+	var json = parseJSON(response);
 	buddy = get_buddy_from_collection(json.buddyname, json.proto_id, json.account_username);
 	buddy.history = json.history;
 	buddy.history_string = response;
@@ -243,8 +256,7 @@ function buddy_sort_callback(a, b) {
 var update_buddies_timeout = false;
 function update_buddies(buddies) {
 	
-	//eval("var json="+buddies+";");
-	var json = eval("(" + buddies + ")");
+	var json = parseJSON(buddies);
 	var buddies = json.buddies;
 	
 	if(!buddies.length) {
@@ -600,3 +612,4 @@ function showDialog(form)
 }
 
 }
+
