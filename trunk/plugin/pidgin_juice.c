@@ -215,7 +215,6 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 		}
 		else
 		{
-			g_io_channel_set_encoding(file_channel, NULL, &error);
 			if (error)
 				purple_debug_info("pidgin_juice", "error: %s\n", error->message);
 				
@@ -401,7 +400,7 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 static gboolean
 write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length)
 {
-	GIOStatus status;
+	GIOStatus status = G_IO_STATUS_NORMAL;
 	GError *err = NULL;
 	gsize len = 0;
 	gsize bytes_written = 0;
@@ -410,10 +409,7 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 		purple_debug_error("pidgin_juice", "Write end of pipe died!\n");
 
 	purple_debug_info("pidgin_juice", "data_length: %d\n", data_length);
-	g_io_channel_set_encoding(gio, NULL, NULL);
-	g_io_channel_set_buffered(gio, FALSE);
-	g_io_channel_set_flags(gio, G_IO_FLAG_NONBLOCK, NULL);
-	g_io_channel_flush(gio, NULL);
+	//g_io_channel_flush(gio, NULL);
 	
 	//ret = g_io_channel_write_chars (gio, ((gchar *)data+start), data_length, &len, &err);
 	while (bytes_written < data_length)
@@ -510,8 +506,10 @@ accept_channel(GIOChannel *listener, GIOCondition condition, gpointer data)
 	#endif
 	if (fd >= 0)
 	{
-		printf("Connection from %s:%hu\n", inet_ntoa(address_in.sin_addr), ntohs(address_in.sin_port));
+		purple_debug_info("pidgin_juice", "Connection from %s:%hu\n", inet_ntoa(address_in.sin_addr), ntohs(address_in.sin_port));
 		new_channel = g_io_channel_unix_new(fd);
+		g_io_channel_set_encoding(new_channel, NULL, NULL);
+		g_io_channel_set_buffered(new_channel, FALSE);
 		g_io_channel_set_flags(new_channel, G_IO_FLAG_NONBLOCK, NULL);
 		g_io_add_watch(new_channel, G_IO_PRI | G_IO_IN | G_IO_HUP, (GIOFunc)read_data, NULL);
 	}
@@ -562,13 +560,15 @@ static GIOChannel
 	}
 	if (sock_is_bound == 0)
 	{
-		perror("bind");
-		exit(EXIT_FAILURE);
+		purple_debug_error("pidgin_juice", "Address already in use\n");
+//		perror("bind");
+//		exit(EXIT_FAILURE);
 	}
 	if (listen(sock, 10) < 0)
 	{
-		perror("listen");
-		exit(EXIT_FAILURE);
+//		perror("listen");
+//		exit(EXIT_FAILURE);
+		purple_debug_error("pidgin_juice", "Could not listen");
 	}
 
 #ifdef _WIN32
@@ -599,7 +599,8 @@ start_web_server()
 static void
 stop_web_server()
 {
-	
+	g_io_channel_shutdown(web_server, TRUE, NULL);
+	g_io_channel_unref(web_server);
 }
 
 /*
