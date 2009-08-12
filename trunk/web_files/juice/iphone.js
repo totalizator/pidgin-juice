@@ -10,7 +10,7 @@ if (window.parseJSON == undefined)
 }
 function buddy_set_typing(buddy, is_typing) {
 	if(is_typing == undefined)
-		is_typing = true;
+		is_typing = false;
 		
 	buddy.is_typing = is_typing;
 	
@@ -374,6 +374,9 @@ function create_buddy(buddy) {
 	li.a=a;
 	li.buddy = buddy;
 	buddy.li = li;
+	
+	buddy.is_typing = false;
+	buddy.history = [];
 	return buddy;
 }
 function update_buddy(buddy_old, buddy_new) {

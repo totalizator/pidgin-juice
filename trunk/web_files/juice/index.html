@@ -14,46 +14,42 @@
 			<ul>
 				<li><!--<a href="#" onclick="change_page('chats', +1);">Conversations</a>--></li>
 			</ul>
-		</div><!---->
+		</div><!-- -->
 		
 		<div id="contact">
 			<h1>Contact</h1>
 			<!--
 			<a class="button homeButton" href="#" onclick="change_page('contacts', -1);">Contacts</a>
-			<!---->
+			-->
 			<img style="" src="" />
 			<div>username</div>
 			<a href="#" class="button homeButton" onclick="change_page('chat');">Chat</a>
 		</div>
 		
 		<div id="chats"><!--
-			--><h1>Chats</h1><!---->
+			--><h1>Chats</h1><!-- -->
 			<a class="button homeButton" href="#" onclick="change_page('contacts', 0);">Contacts</a>
 			<ul>
 			</ul>
 		</div>
 		
 		<div id="chat">
-			<!---->
+			<!-- -->
 			<h1 style="">Chat</h1>
-			<!---->
+			<!-- -->
 			<a href="#" class="button" onclick="change_page('contact');">Details</a>
 			<a class="button homeButton" href="#" onclick="change_page('contacts', -1);" style="margin:0;padding:0;">Contacts</a>
-			<!----
-			<span style="display:block; height:376px; margin:0;padding:0;border:0; background-color:yellow;"></span>
-			<!---->
+			<!-- -->
 			<ul>
 			</ul>
-			<!---->
+			<!-- -->
 			<div id="send_bar">
-				<!---->
+				<!-- -->
 				<a href="#" onclick="send_message();">Send</a>
-				<!----
-				<textarea onkeypress="if(!event.shiftKey && (event.keyCode == 10 || event.keyCode == 13)) {alert('noshift shift newline'); return false; send_message(); return false;}"></textarea>
-				<!---->
+				<!-- -->
 				<textarea onkeypress="return newline_or_send(event);"></textarea>
 			</div>
-			<!---->
+			<!-- -->
 		</div>
 		
 		<div id="other">
