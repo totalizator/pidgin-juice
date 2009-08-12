@@ -8,6 +8,39 @@ if (window.parseJSON == undefined)
 			eval('(' + text + ')');
 	}
 }
+function buddy_set_typing(buddy, is_typing) {
+	if(is_typing == undefined)
+		is_typing = true;
+		
+	buddy.is_typing = is_typing;
+	
+	chat = document.getElementById('chat');
+	lis = chat.getElementsByTagName('ul')[0];
+	buddy = get_buddy_from_collection(buddy);
+	if(chat.buddy != undefined) {
+		chatting_buddy = get_buddy_from_collection(chat.buddy);
+		if(buddy != chatting_buddy)
+			return;
+	}
+	//remove existing typing notifications if any
+	typing_notifications = [];
+	for(i=lis.childNodes.length-1; i>=0; i--) {
+		if (lis.childNodes[i].className != "typing")
+			continue;
+		else
+			typing_notifications.push(lis.childNodes[i]);
+	}
+	for(i=0; i<typing_notifications.length; i++) {
+		typing_notifications[i].parentNode.removeChild(typing_notifications[i]);
+	}
+	//add one back on
+	if (is_typing) {
+		li = document.createElement('LI');
+		li.innerHTML = 'typing';
+		li.className = 'typing';
+		lis.appendChild(li);
+	}
+}
 function buddy_reset_unread(buddy) {
 	buddy.unread_count = 0;
 	if(buddy.li.firstChild.tagName == 'SPAN')
@@ -56,10 +89,15 @@ function buddy_receive_message(buddy, message) {
 		buddy_add_unread(buddy);
 }
 function get_events_callback(response) {
-	alert(response);
+	//a shortcut to bypass processing blank "continue" events
+	if (response.search(/\"type\":\"continue\"/) > -1) {
+		setTimeout(get_events, 3000);
+		return;
+	}
+	//alert(response);
 	setTimeout(get_events, 10);
 	try {
-	var json = parseJSON(response);
+		var json = parseJSON(response);
 	} catch(e) {
 	  alert(e.message);
 	}
@@ -67,18 +105,25 @@ function get_events_callback(response) {
 	for(i=0; i<events.length; i++) {
 		if (events[i] == undefined || events[i].type == undefined)
 			continue;
-		type = events[i].type;
-		//alert(type);
+			
+		buddy = get_buddy_from_collection(events[i].buddyname, events[i].proto_id, events[i].account_username);
+		
 		switch (events[i].type) {
 			case "sent" : 
 			case "received" : {
-				buddy = get_buddy_from_collection(events[i].buddyname, events[i].proto_id, events[i].account_username);
-				alert(buddy); alert(buddy.buddyname);
 				if(!buddy) {
 					alert("no such buddy "+events[i].buddyname);
 					continue;
 				}
 				buddy_receive_message(buddy, events[i]);
+				break;
+			}
+			case "typing" : {
+				buddy_set_typing(buddy, true);
+				break;
+			}
+			case "not_typing" : {
+				buddy_set_typing(buddy, false);
 				break;
 			}
 		}
@@ -209,6 +254,9 @@ function update_chat_with_history() {
 		else
 			ul.appendChild(li);
 	}
+	
+	buddy_set_typing(chat.buddy, chat.buddy.is_typing);
+	
 	//ul.scrollTop = ul.scrollHeight;
 	scrollTo(0,10000);
 }
