@@ -200,7 +200,7 @@ buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_dat
 	gchar *output;
 	gchar *escaped_buddyname;
 	
-	if (!buddyname || !message)
+	if (!buddyname)
 		return;
 	
 	escaped_buddyname = g_strescape(buddyname, "");
@@ -223,7 +223,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	gchar *output;
 	gchar *escaped_buddyname;
 	
-	if (!buddyname || !message)
+	if (!buddyname)
 		return;
 	
 	escaped_buddyname = g_strescape(buddyname, "");
