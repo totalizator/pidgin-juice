@@ -21,6 +21,9 @@ body > div {
 	/* also change #chat > ul */
 	min-height: 416px;
 }
+body.landscape > div {
+	min-height: 268px;
+}
 body > *[selected="true"] {
     display: block;
 }
@@ -115,6 +118,9 @@ body > div > ul > li > img {
 	min-height: 281px;
 	overflow-y:scroll;
 }
+body.landscape #chat > ul {
+	min-height: 133px;
+}
 #chat > div#send_bar {
 	height: 65px;
 	width: 200px;
@@ -128,7 +134,7 @@ body > div > ul > li > img {
 }
 /**/
 body.landscape #chat > div#send_bar {
-	width: 380px;
+	width: 370px;
 }
 /**/
 #chat > div#send_bar > a {
@@ -147,7 +153,7 @@ body.landscape #chat > div#send_bar {
 
 #chat > div#send_bar textarea {
 	display: block;
-	height: ;
+	height: 55px;
 	width: 190px;
 	margin: 0;
 	border: 0 none transparent;
@@ -156,6 +162,9 @@ body.landscape #chat > div#send_bar {
 	background: transparent;
 	outline: 0 none transparent;
 	font-size: 16px;
+}
+body.landscape #chat > div#send_bar textarea {
+	width: 360px;
 }
 
 #chat > ul > li {

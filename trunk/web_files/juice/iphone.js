@@ -517,6 +517,7 @@ addEventListener("load", function(event)
 	setTimeout(get_events, 1000);
 }, false);
 var currentWidth = 0;
+var currentScroll = 0;
 function checkOrientAndLocation()
 {
 	if (window.innerWidth != currentWidth)
@@ -526,7 +527,11 @@ function checkOrientAndLocation()
 		var orient = currentWidth == 320 ? "profile" : "landscape";
 		document.body.setAttribute("orient", orient);
 		document.body.className = orient;
-		scrollTo(0,1);
+		alert('change to '+orient);
+		if (currentScroll == 0) {
+			setTimeout(scrollTo, 10, 0,1);
+		}
+		alert('scrolled to '+currentScroll);
 	}
 	setTimeout(checkOrientAndLocation, 300);
 }
