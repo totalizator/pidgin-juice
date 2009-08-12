@@ -412,17 +412,17 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 	//g_io_channel_flush(gio, NULL);
 	
 	//ret = g_io_channel_write_chars (gio, ((gchar *)data+start), data_length, &len, &err);
-	while (bytes_written < data_length)
+	while (bytes_written < data_length && (status == G_IO_STATUS_NORMAL || status == G_IO_STATUS_AGAIN) && err == NULL)
 	{
 		status = g_io_channel_write_chars (gio, (gchar *)data + bytes_written, data_length - bytes_written, &len, &err);
 		bytes_written += len;
+		purple_debug_info("pidgin_juice", "Error: %d; %d; %d; %d;\n", status==G_IO_STATUS_ERROR, status==G_IO_STATUS_NORMAL, status==G_IO_STATUS_EOF, status==G_IO_STATUS_AGAIN);
 	}
 	
 	
 	//DONT REMOVE THIS DEBUG.
 	//for some magical mystical reason it is the only thing ensuring the end of the buddy icon is sent
 	purple_debug_info("pidgin_juice", "wrote %d bytes\n", len);
-	purple_debug_info("pidgin_juice", "Error: %d; %d; %d; %d;\n", status==G_IO_STATUS_ERROR, status==G_IO_STATUS_NORMAL, status==G_IO_STATUS_EOF, status==G_IO_STATUS_AGAIN);
 	if (err != NULL)
 		purple_debug_info("pidgin_juice", "Error: %s\n", err->message);
 	
