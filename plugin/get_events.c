@@ -134,68 +134,110 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 				   gpointer user_data)
 {
 	gchar *output;
+	gchar *escaped_buddyname;
+	gchar *escaped_message;
+	
+	if (!buddyname || !message)
+		return;
+	
+	escaped_buddyname = g_strescape(buddyname);
+	escaped_message = g_strescape(message);
+	
 	output = g_strdup_printf("{ \"type\":\"received\","
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
 							 "\"timestamp\":%lu }",
-							 message,
-							 buddyname,
+							 escaped_message,
+							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
 							 (gulong)time(NULL));
 	
 	events_push_to_queue(output);
+	
+	g_free(escaped_message);
+	g_free(escaped_buddyname);
 }
+
 static void
 sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 				   PurpleConversation *conv, PurpleMessageFlags flags,
 				   gpointer user_data)
 {
 	gchar *output;
+	gchar *escaped_buddyname;
+	gchar *escaped_message;
+	
+	if (!buddyname || !message)
+		return;
+	
+	escaped_buddyname = g_strescape(buddyname);
+	escaped_message = g_strescape(message);
+	
 	output = g_strdup_printf("{ \"type\":\"sent\","
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
 							 "\"timestamp\":%lu }",
-							 message,
-							 buddyname,
+							 escaped_message,
+							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
 							 (gulong)time(NULL));
 	
 	events_push_to_queue(output);
+	
+	g_free(escaped_message);
+	g_free(escaped_buddyname);
 }
 
 static void
-buddy_typing_cb(PurpleAccount *account, const char *name, gpointer user_data)
+buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_data)
 {
 	gchar *output;
+	gchar *escaped_buddyname;
+	
+	if (!buddyname || !message)
+		return;
+	
+	escaped_buddyname = g_strescape(buddyname);
 	
 	output = g_strdup_printf("{ \"type\":\"typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\" }", name,
+							 "\"account_username\":\"%s\" }", 
+							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account));
 	
 	events_push_to_queue(output);
+	
+	g_free(escaped_buddyname);
 }
 static void 
 buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer user_data)
 {
 	gchar *output;
+	gchar *escaped_buddyname;
+	
+	if (!buddyname || !message)
+		return;
+	
+	escaped_buddyname = g_strescape(buddyname);
 	
 	output = g_strdup_printf("{ \"type\":\"not_typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\" }", buddyname,
+							 "\"account_username\":\"%s\" }", escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account));
 	
 	events_push_to_queue(output);
+	
+	g_free(escaped_buddyname);
 }
 
 
@@ -280,6 +322,6 @@ juice_GET_events(GIOChannel *channel)
 		channels = g_hash_table_new_full(NULL, NULL, NULL, NULL);
 	
 	//Otherwise, store up the channel
-	timeout = purple_timeout_add_seconds(5, (GSourceFunc)write_to_client, channel);
+	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
 	g_hash_table_insert(channels, channel, GINT_TO_POINTER(timeout));
 }
