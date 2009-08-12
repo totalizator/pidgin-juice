@@ -13,7 +13,6 @@ juice_POST_sendim(const gchar *buddyname, const gchar *proto_id, const gchar *pr
 	PurpleAccount *account;
 	gchar *return_string;
 	PurpleConversation *conv;
-	gchar **parts = NULL;
 	gchar *message_encoded = NULL;
 	
 	if (!buddyname || !proto_id || !proto_username)
@@ -23,9 +22,7 @@ juice_POST_sendim(const gchar *buddyname, const gchar *proto_id, const gchar *pr
 		return NULL;
 	}
 	
-	parts = g_strsplit(message, "\n", -1);
-	message_encoded = g_strjoinv("<br>", parts);
-	g_strfreev(parts);
+	message_encoded = purple_strdup_withhtml(message);
 	
 	account = purple_accounts_find(proto_username, proto_id);
 	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,

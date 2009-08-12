@@ -105,7 +105,7 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		if (buddyname != NULL)
 		{
 			buddyname_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(buddyname_node, buddyname);
+			json_node_set_string(buddyname_node, purple_normalize(account, buddyname));
 			json_object_add_member(json_buddy, "buddyname", buddyname_node);
 		}
 		
