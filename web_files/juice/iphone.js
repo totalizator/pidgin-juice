@@ -527,11 +527,7 @@ function checkOrientAndLocation()
 		var orient = currentWidth == 320 ? "profile" : "landscape";
 		document.body.setAttribute("orient", orient);
 		document.body.className = orient;
-		alert('change to '+orient);
-		if (currentScroll == 0) {
-			setTimeout(scrollTo, 10, 0,1);
-		}
-		alert('scrolled to '+currentScroll);
+		setTimeout(scrollTo, 10, 0,1);
 	}
 	setTimeout(checkOrientAndLocation, 300);
 }
