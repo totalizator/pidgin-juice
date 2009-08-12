@@ -140,8 +140,8 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	if (!buddyname || !message)
 		return;
 	
-	escaped_buddyname = g_strescape(buddyname);
-	escaped_message = g_strescape(message);
+	escaped_buddyname = g_strescape(buddyname, "");
+	escaped_message = g_strescape(message, "");
 	
 	output = g_strdup_printf("{ \"type\":\"received\","
 							 "\"message\":\"%s\", "
@@ -173,8 +173,8 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	if (!buddyname || !message)
 		return;
 	
-	escaped_buddyname = g_strescape(buddyname);
-	escaped_message = g_strescape(message);
+	escaped_buddyname = g_strescape(buddyname, "");
+	escaped_message = g_strescape(message, "");
 	
 	output = g_strdup_printf("{ \"type\":\"sent\","
 							 "\"message\":\"%s\", "
@@ -203,7 +203,7 @@ buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_dat
 	if (!buddyname || !message)
 		return;
 	
-	escaped_buddyname = g_strescape(buddyname);
+	escaped_buddyname = g_strescape(buddyname, "");
 	
 	output = g_strdup_printf("{ \"type\":\"typing\","
 							 "\"buddyname\":\"%s\", "
@@ -226,7 +226,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	if (!buddyname || !message)
 		return;
 	
-	escaped_buddyname = g_strescape(buddyname);
+	escaped_buddyname = g_strescape(buddyname, "");
 	
 	output = g_strdup_printf("{ \"type\":\"not_typing\","
 							 "\"buddyname\":\"%s\", "
