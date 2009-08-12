@@ -56,6 +56,7 @@ function buddy_receive_message(buddy, message) {
 		buddy_add_unread(buddy);
 }
 function get_events_callback(response) {
+	alert(response);
 	setTimeout(get_events, 10);
 	try {
 	var json = parseJSON(response);
@@ -67,13 +68,12 @@ function get_events_callback(response) {
 		if (events[i] == undefined || events[i].type == undefined)
 			continue;
 		type = events[i].type;
-		if (type == "sent")
-			type = "received";
 		//alert(type);
 		switch (events[i].type) {
 			case "sent" : 
 			case "received" : {
 				buddy = get_buddy_from_collection(events[i].buddyname, events[i].proto_id, events[i].account_username);
+				alert(buddy); alert(buddy.buddyname);
 				if(!buddy) {
 					alert("no such buddy "+events[i].buddyname);
 					continue;
@@ -282,13 +282,14 @@ function update_buddies(buddies) {
 		if (!existing_buddy)
 		{
 			existing_buddy = buddy = create_buddy(buddy);
-			to_add.push(buddy);
+			//to_add.push(buddy);
+			add_buddy_to_collection(buddy);
 			buddylist.appendChild(buddy.li);
 		}
 		update_buddy(existing_buddy,buddy);
 		buddy.time_updated = time_updated;
 	}
-	buddies_collection = buddies_collection_new;
+	//buddies_collection = buddies_collection_new;
 	
 	/* remove contacts that aren't in the list *
 	for(i=0; i<buddies_collection.length; i++) {
