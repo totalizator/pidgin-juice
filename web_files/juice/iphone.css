@@ -11,7 +11,7 @@ body {
 body > div {
     display: none;
     min-height: 416px;
-    background-color: #dbe2ed;
+    background-color: #ffffff;
     margin:0;
     padding:0;
     position:relative;
@@ -80,7 +80,7 @@ body > div#contacts > ul > li {
     margin: 0;
     border-bottom: 1px solid #E0E0E0;
     padding: 0;
-    background: transparent url(iPhoneArrow_grey.png) no-repeat right center;
+    background: transparent url(iPhoneArrow_white.png) no-repeat right center;
     font-size: 20px;
     font-weight: bold;
     list-style: none;
