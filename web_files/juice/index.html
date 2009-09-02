@@ -3,59 +3,47 @@
 <head>
 	<title>Pidgin Juice</title>
 	<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=6.0; user-scalable=1;"/>
-	<style type="text/css" media="screen">@import "iphone.css";</style>
-	<!-- -->
-	<!-- -->
+	<style type="text/css" media="screen">@import "juice.css";</style>
 </head>
-<body class="profile">
-		<div id="contacts" selected="true"><!--
-			--><h1 style="margin:; display:;">Contacts</h1><!---->
+<body orientation="profile">
+
+	<div id="contacts" style="display:block;">
+		<div class="heading">
+			<h1 style="margin:; display:;">Contacts</h1>
 			<a class="button" href="#" onclick="setTimeout(get_buddies, 300);">Refresh</a>
-			<ul>
-				<li><!--<a href="#" onclick="change_page('chats', +1);">Conversations</a>--></li>
-			</ul>
-		</div><!-- -->
-		
-		<div id="contact">
+		</div>
+		<ul>
+		</ul>
+	</div>
+	
+	<div id="contact">
+		<div class="heading">
 			<h1>Contact</h1>
-			<!--
-			<a class="button homeButton" href="#" onclick="change_page('contacts', -1);">Contacts</a>
-			-->
-			<img style="" src="" />
-			<div>username</div>
-			<a href="#" class="button homeButton" onclick="change_page('chat');">Chat</a>
+			<a href="#" class="button homeButton" onclick="change_page('chat', -1);">Chat</a>
 		</div>
-		
-		<div id="chats"><!--
-			--><h1>Chats</h1><!-- -->
-			<a class="button homeButton" href="#" onclick="change_page('contacts', 0);">Contacts</a>
-			<ul>
-			</ul>
-		</div>
-		
-		<div id="chat">
-			<!-- -->
-			<h1 style="">Chat</h1>
-			<!-- -->
-			<a href="#" class="button" onclick="change_page('contact');">Details</a>
+		<img style="" src="" />
+		<div id="details">username</div>
+	</div>
+	
+	<div id="chat" style="display:;">
+		<div class="heading">
+			<h1>Chat</h1>
 			<a class="button homeButton" href="#" onclick="change_page('contacts', -1);" style="margin:0;padding:0;">Contacts</a>
-			<!-- -->
-			<ul>
-			</ul>
-			<!-- -->
-			<div id="send_bar">
-				<!-- -->
-				<a href="#" onclick="send_message();">Send</a>
-				<!-- -->
-				<textarea onkeypress="return newline_or_send(event);"></textarea>
-			</div>
-			<!-- -->
+			<a href="#" class="button" onclick="change_page('contact', +1);">Details</a>
 		</div>
 		
-		<div id="other">
-			other
+		<ul>
+		</ul>
+		
+		<div id="send_bar">
+			<a href="#" onclick="send_message();">Send</a>
+			<textarea onkeypress="adjust_send_bar_size(event.target);"></textarea>
 		</div>
-		<!---->
-	<script type="text/javascript" src="iphone.js"></script>
+	</div>
+	
+	<div id="other">
+		other
+	</div>
+	<script type="text/javascript" src="juice.js"></script>
 </body>
 </html>
