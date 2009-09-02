@@ -1,0 +1,182 @@
+body {
+    font-family: Helvetica;
+    background: #FFFFFF;
+    color: #000000;
+    overflow: hidden;
+    -webkit-text-size-adjust: none;
+    padding: 0;
+    margin: 0;
+	width: 320px;
+	
+	overflow:scroll;
+}
+body[orientation=profile] {
+	background: grey;
+}
+body[orientation=landscape] {
+	background: blue;
+}
+
+body > div {
+	position: relative;
+	top: 0;
+	left: 0;
+	margin:0;padding:0;
+	width: 320px;
+	right: auto;
+	display: none;
+    min-height: 416px;
+	background-color: white;
+	z-index: 0;
+	
+	min-height: 376px;
+	padding-top: 40px;
+	
+	height:100%;
+}
+body[orientation=landscape] > div {
+	min-height: 268px;
+}
+/*
+body > div[selected=true] {
+	display:block;
+}
+*/
+body > div.left {
+	left: -320px;
+}
+
+body > div.right {
+	left: 320px;
+}
+
+body > div > div.heading {
+	top: 0;
+	left: 0;
+	margin:0;padding:0;
+	position: fixed;
+}
+
+h1 {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px;
+	width: 300px;
+    line-height: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: rgba(0, 0, 0, 0.6) 0px 0px 0;
+    text-overflow: ellipsis;
+    color: #FFFFFF;
+    background: #6d84a2 url(iPhoneToolbar.png)  repeat-x;
+	display: block;
+}
+
+a.button {
+    position: absolute;
+    top: 8px;
+    right: 6px;
+    -webkit-border-image: url(iPhoneButton.png) 0 5 0 5;
+    -webkit-border-radius: 0;
+    border-width: 0 5px 0 5px;
+    padding: 0;
+    height: 28px;
+    line-height: 28px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #FFFFFF;
+    text-shadow: rgba(0, 0, 0, 0.6) 0px -1px 0;
+    text-decoration: none;
+    background: none;
+}
+
+a.button.homeButton {
+    left: 6px;
+    right: auto;
+    -webkit-border-image: url(iPhoneBackButton.png) 0 8 0 14;
+    border-width: 0 8px 0 14px;
+}
+
+
+
+/* Contacts */
+#contacts {
+}
+#contacts > ul {
+	margin: 0;
+	padding: 0;
+	height:100%;
+}
+#contacts > ul > li {
+    margin: 0;
+    border-bottom: 1px solid #E0E0E0;
+    padding: 0;
+    background: transparent url(iPhoneArrow_white.png) no-repeat right center;
+    font-size: 20px;
+    font-weight: bold;
+    list-style: none;
+}
+#contacts > ul > li > a {
+    display: inline-block;
+	width: 100%;
+    padding: 8px 8px 8px 8px;
+    text-decoration: none;
+    color: inherit;
+}
+#contacts > ul > li > a.away {
+	color:grey;
+	font-style: italic;
+}
+#contacts > ul > li > a.away:after {
+	content: " (away)"
+}
+#contacts ul li .unread {
+	color: red;
+	float: left;
+    padding: 8px 8px;
+}
+#contacts > ul > li > img {
+	margin: 12px 32px 2px 2px;
+	position: absolute;
+	right:0;
+}
+
+
+
+/* Contact */
+#contact img {
+	display: block;
+	margin: 10px auto;
+}
+#contact div#details {
+	padding: 10px;
+}
+
+
+
+/* Chat */
+#chat div#send_bar {
+	position: absolute;
+	bottom:0;
+	width: 320px;
+	height: 60px;
+	background-color: yellow;
+}
+#chat #send_bar textarea {
+	font-size: 20px;
+	line-height: 20px;
+	height: 40px;
+	width: 260px;
+	position: absolute;
+	bottom: 0;
+	padding: 0;
+	margin: 0;
+	border: 0;
+	overflow: auto;
+}
+#chat #send_bar a {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+}
