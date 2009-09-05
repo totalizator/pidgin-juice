@@ -119,7 +119,7 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	}
 	else if (g_str_equal(path->str, "/send_im.js"))
 	{
-		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup($_GET, "username"), 
+		*resource_out = juice_POST_sendim((gchar *)g_hash_table_lookup($_GET, "buddyname"), 
 										  (gchar *)g_hash_table_lookup($_GET, "proto_id"), 
 										  (gchar *)g_hash_table_lookup($_GET, "account_username"),
 										  (gchar *)g_hash_table_lookup($_GET, "message"), 
