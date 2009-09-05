@@ -177,14 +177,14 @@ var Json = {
 		var response = '';
 		if (is_array) {
 			for(i=0; i<values.length; i++) {
-				response += ',' + this.encode(values[i]);
+				response += ',' + this.escape(values[i]);
 			}
 			response = response.replace(/^,/, '');
 			response = '[' + response + ']';
 		}
 		else {
 			for(i=0; i<values.length; i++) {
-				response += ',"' + keys[i] + '":' + this.encode(values[i]);
+				response += ',"' + keys[i] + '":' + this.escape(values[i]);
 			}
 			response = response.replace(/^,/, '');
 			response = '{' + response + '}';
@@ -339,6 +339,28 @@ function show_chat(buddy) {
 
 
 /* DATA FUNCTIONS */
+function send_message() {
+	var page = '/send_im.js';
+	var chat = document.getElementById('chat');
+	var buddy = chat.buddy;
+	var textarea = chat.getElementsByTagName('textarea')[0];
+	var message = textarea.value;
+	textarea.value = "";
+	
+	page += '?';
+	page += 'buddyname='+escape(buddy.buddyname)+'&username='+escape(buddy.buddyname); //backward compatibility
+	page += '&proto_id='+escape(buddy.proto_id);
+	page += '&account_username='+escape(buddy.account_username);
+	page += '&message='+escape(message);
+	//alert(page);
+	
+	//This is currently using both POST and GET. Probably only the GET values are
+	//being read server-side.
+	//When server is updated, remove the get component
+	
+	//Should these all be url encoded? if so, who will decode them? if not, extra & and = will split it apart!;
+	Ajax.post(page, "");
+}
 
 var events_timeout = 0;
 function get_events_timeout(delay) {
