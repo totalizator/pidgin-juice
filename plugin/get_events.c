@@ -175,6 +175,8 @@ write_to_client(GIOChannel *channel)
 	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
 	g_io_channel_flush(channel, NULL);
 	
+	g_io_channel_unref(channel);
+	
 	g_free(headers);
 	g_string_free(returnstring, TRUE);
 	
@@ -410,6 +412,7 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	chan->timeout = timeout;
 	chan->timestamp = timestamp;
 	
+	g_io_channel_ref(channel);
 	g_hash_table_insert(channels, channel, chan);
 	
 	if (is_event_since(timestamp))

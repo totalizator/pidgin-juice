@@ -465,7 +465,7 @@ read_data(GIOChannel *channel, GIOCondition condition, gpointer data)
 	if (!len && !request_string->len)
 	{
 		g_string_free(request_string, TRUE);
-		g_io_channel_close(channel);
+		g_io_channel_shutdown(channel);
 		return FALSE;
 	}
 	
