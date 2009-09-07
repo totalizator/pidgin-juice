@@ -37,7 +37,7 @@
 		
 		<div id="send_bar">
 			<a href="#" onclick="send_message();">Send</a>
-			<textarea onkeypress="adjust_send_bar_size(event.target);"></textarea>
+			<textarea onkeypress="return send_bar_typing_callback(event);"></textarea>
 		</div>
 	</div>
 	
