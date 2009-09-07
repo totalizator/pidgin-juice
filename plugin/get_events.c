@@ -140,7 +140,7 @@ write_to_client(GIOChannel *channel)
 		
 	chan = g_hash_table_lookup(channels, channel);
 	if (chan && chan->timeout)
-		purple_timeout_remove(timeout);
+		purple_timeout_remove(chan->timeout);
 	g_hash_table_steal(channels, channel);
 	
 	returnstring = g_string_new("{ \"events\" : [ ");
@@ -396,7 +396,7 @@ gboolean channel_hung_up(GIOChannel *channel, GIOCondition cond, gpointer data)
 	
 	chan = g_hash_table_remove(channel);
 	if (chan && chan->timeout)
-		purple_timeout_remove(timeout);
+		purple_timeout_remove(chan->timeout);
 	g_io_channel_unref(channel);
 }
 
