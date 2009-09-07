@@ -256,6 +256,7 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 	GString *uri = NULL;
 	GString *path = NULL, *query = NULL;
 	GString *reply_string = NULL;
+	GHashTable *$_GET = NULL;
 	gchar *resource = NULL;
 	gsize resource_length = 0;
 	int position = 0;
@@ -332,7 +333,9 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 	if (g_str_equal(path->str, "/events.js"))
 	{
 		*reply_out = g_strdup(""); *reply_out_length = 0;
-		juice_GET_events(channel);
+		$_GET = parse_query(query->str);
+		juice_GET_events(channel, $_GET);
+		g_hash_table_destroy($_GET);
 	}
 	else
 	{
