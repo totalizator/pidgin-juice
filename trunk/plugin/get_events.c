@@ -398,6 +398,8 @@ gboolean channel_hung_up(GIOChannel *channel, GIOCondition cond, gpointer data)
 	if (chan && chan->timeout)
 		purple_timeout_remove(chan->timeout);
 	g_io_channel_unref(channel);
+	
+	return TRUE;
 }
 
 static void
