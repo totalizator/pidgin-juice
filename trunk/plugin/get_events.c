@@ -415,7 +415,7 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	//Otherwise, store up the channel
 	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
 	timestamp = (gulong)strtoul((gchar *)g_hash_table_lookup($_GET, "timestamp"), NULL, 10);
-	purple_debug_info("pidgin_juice", "get events since: %u\n", timestamp);
+	purple_debug_info("pidgin_juice", "get events since: %ul\n", timestamp);
 	
 	chan = g_new0(JuiceChannel, 1);
 	chan->channel = channel;

@@ -180,6 +180,11 @@ a.button.homeButton {
 	right: 0;
 	bottom: 0;
 }
+#chat > ul {
+	padding-bottom: 60px;
+	margin-left: 0; padding-left: 0;
+	list-style-type: none;
+}
 #chat > ul > li {
 	left: 0;
 	right: auto;
