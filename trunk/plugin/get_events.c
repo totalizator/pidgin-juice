@@ -23,7 +23,7 @@ struct _ConnectedSignals {
 	gulong buddy_typing_stopped_signal;
 	gulong sent_im_signal;
 };
-static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0};
+static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0,0};
 typedef struct _JuiceEvent {
 	gchar *event;
 	gulong timestamp;
@@ -34,7 +34,8 @@ typedef struct _JuiceChannel {
 	gulong timestamp;
 } JuiceChannel;
 
-gboolean remove_old_events(gpointer dunno)
+static gboolean 
+remove_old_events(gpointer dunno)
 {
 	//Events older than this timestamp will be removed
 	gulong old_timestamp;
@@ -54,7 +55,8 @@ gboolean remove_old_events(gpointer dunno)
 	return TRUE;	
 }
 
-gboolean is_event_since(gulong time)
+static gboolean 
+is_event_since(gulong time)
 {
 	JuiceEvent *event;
 	
@@ -65,36 +67,19 @@ gboolean is_event_since(gulong time)
 	return FALSE;	
 }
 
-guint number_of_events_since(gulong time)
-{
-	guint count;
-	JuiceEvent *event;
-	guint max_length;
-	
-	max_length = g_queue_get_length(&queue);
-	for(count=max_length-1; count>=0; count--)
-	{
-		event = g_queue_peek_nth(&queue, count);
-		if (event->timestamp < time)
-			break;
-		returnlist = g_list_prepend(returnlist, event);
-	}
-	
-	return count + 1;
-}
-
-GList *get_events_since(gulong time)
+static GList 
+*get_events_since(gulong time)
 {
 	GList *returnlist = NULL;
 	JuiceEvent *event;
-	guint i;
+	gint i;
 	guint max_length;
 	
 	max_length = g_queue_get_length(&queue);
 	for(i=max_length-1; i>=0; i--)
 	{
 		event = g_queue_peek_nth(&queue, i);
-		if (event->timestamp < time)
+		if (event->timestamp <= time)
 			break;
 		returnlist = g_list_prepend(returnlist, event);
 	}
@@ -111,7 +96,7 @@ disconnect_signals_cb(gpointer data)
 	
 	purple_signals_disconnect_by_handle(&ConnectedSignals);
 	
-	while(event = g_queue_pop_head(&queue))
+	while((event = g_queue_pop_head(&queue)))
 	{
 		//clear the queue
 		g_free(event->event);
@@ -142,7 +127,6 @@ write_to_client(GIOChannel *channel)
 	JuiceEvent *next_event;
 	gboolean first = TRUE;
 	guint timeout;
-	guint i;
 	JuiceChannel *chan;
 	GList *latest_events;
 	GList *current;
@@ -339,7 +323,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	output = g_strdup_printf("{ \"type\":\"not_typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\" }, "
+							 "\"account_username\":\"%s\", "
 							 "\"timestamp\":%lu }", escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
@@ -405,8 +389,6 @@ connect_to_signals()
 static void
 juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 {
-	gchar *body = NULL;
-	gchar *headers = NULL;
 	guint timeout;
 	JuiceChannel *chan;
 	gulong timestamp;
@@ -418,7 +400,8 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	
 	//Otherwise, store up the channel
 	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
-	timestamp = (gulong)strtoul(const char *nptr, NULL, 10);
+	timestamp = (gulong)strtoul((gchar *)g_hash_table_lookup($_GET, "timestamp"), NULL, 10);
+	purple_debug_info("pidgin_juice", "get events since: %u\n", timestamp);
 	
 	chan = g_new0(JuiceChannel, 1);
 	chan->channel = channel;
