@@ -394,7 +394,7 @@ gboolean channel_hung_up(GIOChannel *channel, GIOCondition cond, gpointer data)
 {
 	JuiceChannel *chan;
 	
-	chan = g_hash_table_remove(channel);
+	chan = g_hash_table_remove(channels, channel);
 	if (chan && chan->timeout)
 		purple_timeout_remove(chan->timeout);
 	g_io_channel_unref(channel);
