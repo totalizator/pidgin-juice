@@ -390,6 +390,16 @@ connect_to_signals()
 	
 }
 
+gboolean channel_hung_up(GIOChannel *channel, GIOCondition cond, gpointer data)
+{
+	JuiceChannel *chan;
+	
+	chan = g_hash_table_remove(channel);
+	if (chan && chan->timeout)
+		purple_timeout_remove(timeout);
+	g_io_channel_unref(channel);
+}
+
 static void
 juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 {
@@ -413,7 +423,10 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	chan->timestamp = timestamp;
 	
 	g_io_channel_ref(channel);
+	
 	g_hash_table_insert(channels, channel, chan);
+	
+	g_io_add_watch(channel, G_IO_HUP, channel_hung_up, NULL);
 	
 	if (is_event_since(timestamp))
 	{
