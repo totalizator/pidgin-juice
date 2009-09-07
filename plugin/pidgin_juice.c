@@ -367,8 +367,14 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 			{
 				g_string_append(reply_string, "Cache-Control: public\r\n");
 				g_string_append(reply_string, "Pragma: cache\r\n");
-				g_string_append(reply_string, "Expires: Tue, 01 Sep 2009 16:00:00 GMT\r\n");
+				g_string_append(reply_string, "Expires: Tue, 01 Oct 2009 16:00:00 GMT\r\n");
 			}
+		}
+		elseif (g_strrstr(path->str, ".js") != NULL && strlen(g_strrstr(path->str, ".js")) == 4)
+		{
+				g_string_append(reply_string, "Cache-Control: no-cache\r\n");
+				g_string_append(reply_string, "Pragma: No-cache\r\n");
+				g_string_append(reply_string, "Expires: Tue, 01 Sep 2000 16:00:00 GMT\r\n");
 		}
 		if (g_strrstr(path->str, ".html") != NULL && strlen(g_strrstr(path->str, ".html")) == 5)
 			g_string_append(reply_string, "Content-type: text/html\r\n");
