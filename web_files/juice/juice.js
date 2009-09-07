@@ -81,7 +81,7 @@ var Buddies = {
 			buddy.messages = [];
 		buddy.messages.push(message);
 		//while testing, only "sent" messages were in the ajax. put this if-condition back in when they're working properly again!
-		//if (message.type == 'received')
+		if (message.type == 'received')
 			buddy.unread++;
 		this.call_update_buddy_callbacks(buddy);
 	},
@@ -210,6 +210,7 @@ function update_unread_count(buddy) {
 		spans = buddy.li.getElementsByTagName('span');
 		if (spans.length > 0)
 			spans[0].parentNode.removeChild(spans[0]);
+		buddy.unread = 0;
 	}
 	else {
 		//add the number to the front screen
@@ -373,7 +374,7 @@ function get_history_callback(response) {
 }
 
 function get_events_callback(response) {
-	alert(response);
+	//alert(response);
 	get_events_timeout(3000);
 	
 	json = Json.decode(response);
@@ -381,7 +382,6 @@ function get_events_callback(response) {
 	if (json.events.length > 0) {
 		event = json.events[json.events.length-1];
 		if (event.timestamp != undefined) {
-			alert(event.timestamp);
 			if (event.timestamp > latest_event_timestamp) {
 				latest_event_timestamp = event.timestamp;
 			}
@@ -447,7 +447,7 @@ function get_history(buddy) {
 
 var latest_event_timestamp = 0;
 function get_events() {
-	get_events_timeout(10000);
+	///get_events_timeout(60000);
 	Ajax.get('/events.js?timestamp='+latest_event_timestamp, get_events_callback);
 }
 
