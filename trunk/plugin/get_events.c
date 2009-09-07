@@ -287,7 +287,7 @@ connect_to_signals()
 }
 
 static void
-juice_GET_events(GIOChannel *channel)
+juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 {
 	gchar *body = NULL;
 	gchar *headers = NULL;

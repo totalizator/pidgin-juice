@@ -63,7 +63,6 @@ var Buddies = {
 	},
 	
 	call_update_buddy_callbacks: function(buddy) {
-		alert('calling callbacks '+this.update_buddy_callbacks.length);
 		for(i=0; i<this.update_buddy_callbacks.length; i++) {
 			this.update_buddy_callbacks[i](buddy);
 		}
@@ -84,7 +83,6 @@ var Buddies = {
 		//while testing, only "sent" messages were in the ajax. put this if-condition back in when they're working properly again!
 		//if (message.type == 'received')
 			buddy.unread++;
-		alert(buddy.unread);
 		this.call_update_buddy_callbacks(buddy);
 	},
 	buddy_add_history: function(buddy, messages) {
@@ -340,7 +338,6 @@ function send_message() {
 	page += '&proto_id='+escape(buddy.proto_id);
 	page += '&account_username='+escape(buddy.account_username);
 	page += '&message='+escape(message);
-	//alert(page);
 	
 	//This is currently using both POST and GET. Probably only the GET values are
 	//being read server-side.
@@ -376,7 +373,7 @@ function get_history_callback(response) {
 }
 
 function get_events_callback(response) {
-	alert(response);
+	//alert(response);
 	get_events_timeout(3000);
 	
 	json = Json.decode(response);
@@ -384,7 +381,7 @@ function get_events_callback(response) {
 	for(i=0; i<json.events.length; i++) {
 		event = json.events[i];
 		if (event.timestamp != undefined) {
-			if (event.timestamp > latest_event_timestamp)
+			if (event.timestamp > latest_event_timestamp) {
 				latest_event_timestamp = event.timestamp;
 			}
 		}
