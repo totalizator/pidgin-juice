@@ -348,14 +348,14 @@ function send_message() {
 }
 
 var events_timeout = 0;
-var events_timeout_long = 0;
+//var events_timeout_long = 0;
 function get_events_timeout(delay) {
 	if (events_timeout !== 0) {
 		clearTimeout(events_timeout);
 		events_timeout = 0;
-		clearTimeout(events_timeout_long);
+		//clearTimeout(events_timeout_long);
 	}
-	events_timeout_long = setTimeout(function() {get_events(); events_timeout_long = 0;}, 60000);
+	//events_timeout_long = setTimeout(function() {get_events(); events_timeout_long = 0;}, 60000);
 	events_timeout = setTimeout(function() {get_events(); events_timeout = 0;}, delay);
 }
 
@@ -373,18 +373,23 @@ function get_history_callback(response) {
 }
 
 function get_events_callback(response) {
-	//alert(response);
+	alert(response);
 	get_events_timeout(3000);
 	
 	json = Json.decode(response);
 	
-	for(i=0; i<json.events.length; i++) {
-		event = json.events[i];
+	if (json.events.length > 0) {
+		event = json.events[json.events.length-1];
 		if (event.timestamp != undefined) {
+			alert(event.timestamp);
 			if (event.timestamp > latest_event_timestamp) {
 				latest_event_timestamp = event.timestamp;
 			}
 		}
+	}
+	
+	for(i=0; i<json.events.length; i++) {
+		event = json.events[i];
 		switch(event.type) {
 			case "sent" : 
 			case "received" : {
@@ -443,7 +448,7 @@ function get_history(buddy) {
 var latest_event_timestamp = 0;
 function get_events() {
 	get_events_timeout(10000);
-	Ajax.get('/events.js?time='+latest_event_timestamp, get_events_callback);
+	Ajax.get('/events.js?timestamp='+latest_event_timestamp, get_events_callback);
 }
 
 function get_buddies() {
