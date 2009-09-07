@@ -44,10 +44,12 @@ remove_old_events(gpointer dunno)
 	old_timestamp = time(NULL) - 3 * 60; //3 minutes old
 	while (!g_queue_is_empty(&queue))
 	{
-		event = g_queue_peek_tail(&queue);
+		event = g_queue_peek_head(&queue);
+		purple_debug_info("pidgin_juice", "queue is not empty. old:%lu event:%lu\n", old_timestamp, event->timestamp);
 		if (event->timestamp > old_timestamp)
 			break;
-		event = g_queue_pop_tail(&queue);
+		purple_debug_info("pidgin_juice", "timestamp is old\n");
+		event = g_queue_pop_head(&queue);
 		g_free(event->event);
 		g_free(event);
 	}
