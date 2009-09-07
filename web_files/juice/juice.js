@@ -63,6 +63,7 @@ var Buddies = {
 	},
 	
 	call_update_buddy_callbacks: function(buddy) {
+		alert('calling callbacks '+this.update_buddy_callbacks.length);
 		for(i=0; i<this.update_buddy_callbacks.length; i++) {
 			this.update_buddy_callbacks[i](buddy);
 		}
@@ -73,15 +74,18 @@ var Buddies = {
 		buddy.add_history = function(messages){return Buddies.buddy_add_history(this, messages);};
 		buddy.get_messages = function(){return Buddies.buddy_get_messages(this);};
 		buddy.unread = 0;
+		buddy.is_typing = false;
 	},
 	
 	buddy_add_message: function(buddy, message) {
 		if(buddy.messages == undefined)
 			buddy.messages = [];
 		buddy.messages.push(message);
-		if (message.type == 'received')
+		//while testing, only "sent" messages were in the ajax. put this if-condition back in when they're working properly again!
+		//if (message.type == 'received')
 			buddy.unread++;
-		update_unread_count(buddy);
+		alert(buddy.unread);
+		this.call_update_buddy_callbacks(buddy);
 	},
 	buddy_add_history: function(buddy, messages) {
 		buddy.messages = messages.reverse();
@@ -200,6 +204,7 @@ var Json = {
 /* DISPLAY FUNCTIONS */
 
 
+Buddies.add_update_buddy_callback(update_unread_count);
 function update_unread_count(buddy) {
 	chat = document.getElementById('chat');
 	if ((buddy == Buddies.get_buddy(chat.buddy) && current_page.id=='chat') || buddy.unread < 1) {
@@ -221,32 +226,16 @@ function update_unread_count(buddy) {
 	}
 }
 
-function adjust_send_bar_size(el) {
-	//this function is an attempt to resize the textarea as it fills up
-	return;
-	dummy_box = document.getElementById('dummy_textarea_style_helper');
-	if (dummy_box == undefined) {
-		dummy_box = document.createElement('div');
-		dummy_box.id="dummy_textarea_style_helper";
-		styles=['width','fontSize','fontWeight','fontStyle','fontFamily'];
-		for(i in styles) {
-			dummy_box.style[styles[i]] = get_style(el, styles[i]);
-		}
-		//dummy_box.style.visibility = "hidden";
-		dummy_box.style.position = "absolute";
-		dummy_box.style.overflow = 'hidden';
-		el.parentNode.appendChild(dummy_box);
-	}
-	if (dummy_box.textContent != undefined)
-		dummy_box.textContent = el.value;
-	else
-		dummy_box.innerText = el.value;
+function send_bar_typing_callback(event) {
+	if (event.keyCode != 10 && event.keyCode != 13)
+		return true;
 	
-	el.style.overflow = 'hidden';
-	height = dummy_box.offsetHeight + 1;
-	if (height < 20)
-		height = 20;
-	el.style.height = height + 'px';
+	
+	send_message();
+	
+	event.target.blur();
+	
+	return false;
 }
 
 
@@ -285,7 +274,6 @@ function buddy_set_typing(buddy, is_typing) {
 }
 
 function update_chat(buddy) {
-	//alert('updating chat for:\n\n'+buddy.get_messages());
 	chat = document.getElementById('chat');
 	chat.buddy = buddy;
 	
@@ -295,8 +283,8 @@ function update_chat(buddy) {
 	
 	//TODO: don't just remove all of the messages, find a way to just add the
 	// new ones
-	//while(chat_ul.children.length)
-	//	chat_ul.removeChild(chat_ul.firstChild);
+	while(chat_ul.children.length)
+		chat_ul.removeChild(chat_ul.firstChild);
 	
 	escaping_div = document.createElement('div');
 	messages = buddy.get_messages();
@@ -363,12 +351,14 @@ function send_message() {
 }
 
 var events_timeout = 0;
+var events_timeout_long = 0;
 function get_events_timeout(delay) {
 	if (events_timeout !== 0) {
 		clearTimeout(events_timeout);
 		events_timeout = 0;
+		clearTimeout(events_timeout_long);
 	}
-	
+	events_timeout_long = setTimeout(function() {get_events(); events_timeout_long = 0;}, 60000);
 	events_timeout = setTimeout(function() {get_events(); events_timeout = 0;}, delay);
 }
 
@@ -377,15 +367,27 @@ function get_history_callback(response) {
 	
 	buddy = Buddies.get_buddy(json.buddyname, json.proto_id, json.account_username);
 	buddy.add_history(json.history);
+	
+	if (json.history.length > 0 && json.history[0].timestamp != undefined) {
+		if (json.history[0].timestamp > latest_event_timestamp) {
+			latest_event_timestamp = json.history[0].timestamp;
+		}
+	}
 }
 
 function get_events_callback(response) {
+	alert(response);
 	get_events_timeout(3000);
 	
 	json = Json.decode(response);
 	
 	for(i=0; i<json.events.length; i++) {
 		event = json.events[i];
+		if (event.timestamp != undefined) {
+			if (event.timestamp > latest_event_timestamp)
+				latest_event_timestamp = event.timestamp;
+			}
+		}
 		switch(event.type) {
 			case "sent" : 
 			case "received" : {
@@ -441,9 +443,10 @@ function get_history(buddy) {
 	Ajax.get(url, get_history_callback);
 }
 
+var latest_event_timestamp = 0;
 function get_events() {
 	get_events_timeout(10000);
-	Ajax.get('/events.js', get_events_callback);
+	Ajax.get('/events.js?time='+latest_event_timestamp, get_events_callback);
 }
 
 function get_buddies() {

@@ -180,3 +180,20 @@ a.button.homeButton {
 	right: 0;
 	bottom: 0;
 }
+#chat > ul > li {
+	left: 0;
+	right: auto;
+	margin: 4px auto;
+	margin-left: 0;
+	margin-right: auto;
+	min-height:33px;
+	width: 252px;
+	-webkit-border-image: url(/white_bubble.png) 15 15 17 15 / 15px 15px 17px 15px stretch stretch;
+}
+#chat > ul > li.sent {
+	-webkit-border-image: url(/green_bubble.png) 15 15 17 15 / 15px 15px 17px 15px stretch stretch;
+	left: auto;
+	right: 0;
+	margin-left: auto;
+	margin-right: 0;
+}
