@@ -41,6 +41,8 @@ remove_old_events(gpointer dunno)
 	gulong old_timestamp;
 	JuiceEvent *event;
 	
+	purple_debug_info("pidgin_juice", "Remove old events from event queue\n");
+	
 	old_timestamp = time(NULL) - 3 * 60; //3 minutes old
 	while (!g_queue_is_empty(&queue))
 	{
@@ -54,7 +56,8 @@ remove_old_events(gpointer dunno)
 		g_free(event);
 	}
 
-	return TRUE;	
+	purple_debug_info("pidgin_juice", "Done removing old events.\n");
+	return TRUE;
 }
 
 static gboolean 
@@ -128,20 +131,27 @@ write_to_client(GIOChannel *channel)
 	gchar *headers = NULL;
 	JuiceEvent *next_event;
 	gboolean first = TRUE;
-	guint timeout;
-	JuiceChannel *chan;
+	JuiceChannel *chan = NULL;
 	GList *latest_events;
 	GList *current;
 	
+	purple_debug_info("pidgin_juice", "Writing to client.\n");
 	if (channels == NULL)
 	{
+		purple_debug_info("pidgin_juice", "Channels is NULL, aborting write.\n");
 		return FALSE;
 	}
 		
 	chan = g_hash_table_lookup(channels, channel);
-	if (chan && chan->timeout)
-		purple_timeout_remove(chan->timeout);
 	g_hash_table_steal(channels, channel);
+	if (!chan || !chan->timeout) {
+		purple_debug_info("pidgin_juice", "Couldn't find channel struct.\n");
+		//there was no real record of the channel.. don't try write to it
+		return FALSE;
+	}
+	else {
+		purple_timeout_remove(chan->timeout);
+	}
 	
 	returnstring = g_string_new("{ \"events\" : [ ");
 	
@@ -151,6 +161,7 @@ write_to_client(GIOChannel *channel)
 									   "{ \"type\":\"continue\" }");
 	} else {
 		latest_events = get_events_since(chan->timestamp);
+		purple_debug_info("pidgin_juice", "Events in the list: %u\n", g_list_length(latest_events));
 		for(current=latest_events; current; current=g_list_next(current))
 		{
 			next_event = current->data;
@@ -171,9 +182,11 @@ write_to_client(GIOChannel *channel)
 					   "Content-type: application/json\r\n"
 					   "Content-length: %d\r\n\r\n", returnstring->len);
 	
-	write_data(channel, G_IO_OUT, headers, strlen(headers));
+	g_string_prepend(returnstring, headers);
+	
+	//write_data(channel, G_IO_OUT, headers, strlen(headers));
 	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
-	g_io_channel_flush(channel, NULL);
+	//g_io_channel_flush(channel, NULL);
 	
 	g_io_channel_unref(channel);
 	
@@ -188,7 +201,8 @@ write_to_client(GIOChannel *channel)
 static void
 events_table_foreach_cb(gpointer key, gpointer value, gpointer user_data)
 {
-	write_to_client(key);
+	purple_timeout_add(500, write_to_client, key);
+	//write_to_client(key);
 }
 
 static void
@@ -199,6 +213,8 @@ events_push_to_queue(gchar *output, gulong timestamp)
 	event = g_new0(JuiceEvent, 1);
 	event->event = output;
 	event->timestamp = timestamp;
+	
+	purple_debug_info("pidgin_juice", "Adding event: %s\n", output);
 	
 	//Add the event to the queue
 	g_queue_push_tail(&queue, event);
@@ -390,16 +406,21 @@ connect_to_signals()
 	
 }
 
-gboolean channel_hung_up(GIOChannel *channel, GIOCondition cond, gpointer data)
+static gboolean 
+channel_hung_up(GIOChannel *channel, GIOCondition cond, gpointer data)
 {
 	JuiceChannel *chan;
 	
-	chan = g_hash_table_remove(channels, channel);
+	//get the channel to use
+	chan = g_hash_table_lookup(channels, channel);
+	//remove it from the table, as we're about to get rid of it (but don't free! we're still using)
+	g_hash_table_steal(channels, channel);
 	if (chan && chan->timeout)
 		purple_timeout_remove(chan->timeout);
 	g_io_channel_unref(channel);
 	
-	return TRUE;
+	//jeremy added this to get rid of a compiler warning. is this the right thing to return?
+	return FALSE;
 }
 
 static void
@@ -409,6 +430,8 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	JuiceChannel *chan;
 	gulong timestamp;
 	
+	purple_debug_info("pidgin_juice", "Client connected for events.\n");
+	
 	connect_to_signals();
 	
 	if (channels == NULL)
@@ -417,7 +440,7 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	//Otherwise, store up the channel
 	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
 	timestamp = (gulong)strtoul((gchar *)g_hash_table_lookup($_GET, "timestamp"), NULL, 10);
-	purple_debug_info("pidgin_juice", "get events since: %ul\n", timestamp);
+	purple_debug_info("pidgin_juice", "get events since: %lu\n", timestamp);
 	
 	chan = g_new0(JuiceChannel, 1);
 	chan->channel = channel;
@@ -428,7 +451,7 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	
 	g_hash_table_insert(channels, channel, chan);
 	
-	g_io_add_watch(channel, G_IO_HUP, channel_hung_up, NULL);
+//	g_io_add_watch(channel, G_IO_HUP, channel_hung_up, NULL);
 	
 	if (is_event_since(timestamp))
 	{
