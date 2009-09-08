@@ -60,7 +60,6 @@ juice_GET_proto_icon(GHashTable *$_GET, gsize *length) {
 	GError *error = NULL;
 	gsize file_length = 0;
 	gchar *file_contents = NULL;
-	gchar *tmp = NULL;
 	gchar *filename = NULL;
 	
 	proto_id = g_hash_table_lookup($_GET, "proto_id");
