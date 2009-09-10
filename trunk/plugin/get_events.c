@@ -213,7 +213,7 @@ events_push_to_queue(gchar *output, guint64 timestamp)
 	
 	
 	lastevent = g_queue_peek_tail(&queue);
-	if (lastevent->timestamp - timestamp < 1000)
+	if (lastevent && (lastevent->timestamp - timestamp < 1000))
 	{
 		//these two events occured in the same second
 		timestamp = lastevent->timestamp + 1;
