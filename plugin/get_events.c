@@ -47,7 +47,7 @@ remove_old_events(gpointer dunno)
 	while (!g_queue_is_empty(&queue))
 	{
 		event = g_queue_peek_head(&queue);
-		purple_debug_info("pidgin_juice", "queue is not empty. old:%lu event:%lu\n", old_timestamp, event->timestamp);
+		purple_debug_info("pidgin_juice", "queue is not empty. old:%" G_GUINT64_FORMAT " event:%" G_GUINT64_FORMAT "\n", old_timestamp, event->timestamp);
 		if (event->timestamp > old_timestamp)
 			break;
 		purple_debug_info("pidgin_juice", "timestamp is old\n");
@@ -245,7 +245,7 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	gchar *output;
 	gchar *escaped_buddyname;
 	gchar *escaped_message;
-	gulong timestamp;
+	guint64 timestamp;
 	
 	if (!buddyname || !message)
 		return;
@@ -281,7 +281,7 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	gchar *output;
 	gchar *escaped_buddyname;
 	gchar *escaped_message;
-	gulong timestamp;
+	guint64 timestamp;
 	
 	if (!buddyname || !message)
 		return;
@@ -314,7 +314,7 @@ buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_dat
 {
 	gchar *output;
 	gchar *escaped_buddyname;
-	gulong timestamp;
+	guint64 timestamp;
 	
 	if (!buddyname)
 		return;
@@ -342,7 +342,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 {
 	gchar *output;
 	gchar *escaped_buddyname;
-	gulong timestamp;
+	guint64 timestamp;
 	
 	if (!buddyname)
 		return;
