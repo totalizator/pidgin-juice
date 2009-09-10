@@ -8,7 +8,6 @@
  */
 
 #include <blist.h>
-#include <json-glib/json-glib.h>
 
 static gchar *
 juice_GET_buddylist(const GHashTable *$_GET)
@@ -26,27 +25,14 @@ juice_GET_buddylist(const GHashTable *$_GET)
 	const gchar *proto_id;
 	const gchar *proto_name;
 	const gchar *account_username;
-	JsonObject *return_blist;
-	JsonObject *json_buddy;
-	JsonArray *json_buddies;
-	JsonNode *display_name_node;
-	JsonNode *buddyname_node;
-	JsonNode *available_node;
-	JsonNode *status_message_node;
-	JsonNode *proto_id_node;
-	JsonNode *proto_name_node;
-	JsonNode *account_username_node;
-	JsonNode *json_buddy_node;
-	JsonNode *json_buddies_node;
-	JsonGenerator *generator;
-	JsonNode *return_blist_node;
 	PurpleBlistNode *purple_blist_node;
 	PurplePluginProtocolInfo *prpl_info;
 	const gchar *prpl_icon;
-	JsonNode *prpl_icon_node;
+	gboolean first;
+	GString *blist;
 	
-	return_blist = json_object_new();
-	json_buddies = json_array_new();
+	blist = g_string_new("{\"buddies\":[");
+	first = TRUE;
 	
 	for(purple_blist_node = purple_blist_get_root();
 		purple_blist_node;
@@ -60,7 +46,11 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		}
 		if (!PURPLE_BUDDY_IS_ONLINE(buddy))
 			continue;
-		json_buddy = json_object_new();
+		
+		if (first)
+			first = FALSE;
+		else
+			g_string_append_c(blist, ',');
 		
 		/*
 		 We want:
@@ -78,7 +68,7 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		status = purple_presence_get_active_status(purple_buddy_get_presence(buddy));
 		status_message_unescaped = purple_status_get_attr_string (status, "message");
 		if (status_message_unescaped == NULL)
-			status_message = NULL;
+			status_message = g_strdup("");
 		else
 			status_message = g_strescape(status_message_unescaped, "");
 		available = purple_status_is_available(status);
@@ -92,80 +82,23 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		if (prpl_info->list_icon)
 			prpl_icon = prpl_info->list_icon(account, NULL);
 		else
-			prpl_icon = NULL;
+			prpl_icon = g_strdup("");
 		
-		// Set the json nodes
-		if (display_name != NULL)
-		{
-			display_name_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(display_name_node, display_name);
-			json_object_add_member(json_buddy, "display_name", display_name_node);
-		}
-		
-		if (buddyname != NULL)
-		{
-			buddyname_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(buddyname_node, purple_normalize(account, buddyname));
-			json_object_add_member(json_buddy, "buddyname", buddyname_node);
-		}
-		
-		if (prpl_icon != NULL)
-		{
-			prpl_icon_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(prpl_icon_node, prpl_icon);
-			json_object_add_member(json_buddy, "prpl_icon", prpl_icon_node);
-		}
-		
-		available_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_boolean(available_node, available);
-		json_object_add_member(json_buddy, "available", available_node);
-		
-		if (status_message != NULL)
-		{
-			status_message_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(status_message_node, status_message);
-			json_object_add_member(json_buddy, "status_message", status_message_node);
-		}
-		
-		if (proto_id != NULL)
-		{
-			proto_id_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(proto_id_node, proto_id);
-			json_object_add_member(json_buddy, "proto_id", proto_id_node);
-		}
-		
-		if (proto_name != NULL)
-		{
-			proto_name_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(proto_name_node, proto_name);
-			json_object_add_member(json_buddy, "proto_name", proto_name_node);
-		}
-		
-		if (account_username != NULL)
-		{
-			account_username_node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(account_username_node, account_username);
-			json_object_add_member(json_buddy, "account_username", account_username_node);
-		}
-		
-		json_buddy_node = json_node_new(JSON_NODE_OBJECT);
-		json_node_set_object(json_buddy_node, json_buddy);
-		json_array_add_element(json_buddies, json_buddy_node);
+		g_string_append_printf(blist, "{ \"display_name\":\"%s\", "
+									  	"\"buddyname\":\"%s\", "
+									  	"\"prpl_icon\":\"%s\", "
+									  	"\"available\":%s, "
+									  	"\"status_message\":\"%s\", "
+									  	"\"proto_id\":\"%s\", "
+									  	"\"proto_name\":\"%s\", "
+									  	"\"account_username\":\"%s\" }",
+									  	display_name, buddyname,
+									  	prpl_icon, (available?"true":"false"),
+									  	status_message, proto_id,
+									  	proto_name, account_username);
 	}
 	
-	json_buddies_node = json_node_new(JSON_NODE_ARRAY);
-	json_node_take_array(json_buddies_node, json_buddies);
-	json_object_add_member(return_blist, "buddies", json_buddies_node);
+	g_string_append(blist, "]}");
 	
-	return_blist_node = json_node_new(JSON_NODE_OBJECT);
-	json_node_take_object(return_blist_node, return_blist);
-	
-	generator = json_generator_new();
-	json_generator_set_root(generator, return_blist_node);
-	
-	output = json_generator_to_data(generator, NULL);
-	
-	json_node_free(return_blist_node);
-	
-	return output;
+	return blist->str;
 }
