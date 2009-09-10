@@ -26,24 +26,24 @@ struct _ConnectedSignals {
 static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0,0};
 typedef struct _JuiceEvent {
 	gchar *event;
-	gulong timestamp;
+	guint64 timestamp;
 } JuiceEvent;
 typedef struct _JuiceChannel {
 	GIOChannel *channel;
 	guint timeout;
-	gulong timestamp;
+	guint64 timestamp;
 } JuiceChannel;
 
 static gboolean 
 remove_old_events(gpointer dunno)
 {
 	//Events older than this timestamp will be removed
-	gulong old_timestamp;
+	guint64 old_timestamp;
 	JuiceEvent *event;
 	
 	purple_debug_info("pidgin_juice", "Remove old events from event queue\n");
 	
-	old_timestamp = time(NULL) - 3 * 60; //3 minutes old
+	old_timestamp = time(NULL) - 3 * 60 * 1000; //3 minutes old
 	while (!g_queue_is_empty(&queue))
 	{
 		event = g_queue_peek_head(&queue);
@@ -61,7 +61,7 @@ remove_old_events(gpointer dunno)
 }
 
 static gboolean 
-is_event_since(gulong time)
+is_event_since(guint64 time)
 {
 	JuiceEvent *event;
 	
@@ -73,7 +73,7 @@ is_event_since(gulong time)
 }
 
 static GList 
-*get_events_since(gulong time)
+*get_events_since(guint64 time)
 {
 	GList *returnlist = NULL;
 	JuiceEvent *event;
@@ -206,15 +206,26 @@ events_table_foreach_cb(gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
-events_push_to_queue(gchar *output, gulong timestamp)
+events_push_to_queue(gchar *output, guint64 timestamp)
 {
 	JuiceEvent *event;
+	JuiceEvent *lastevent;
+	
+	
+	lastevent = g_queue_peek_tail(&queue);
+	if (lastevent->timestamp - timestamp < 1000)
+	{
+		//these two events occured in the same second
+		timestamp = lastevent->timestamp + 1;
+	}
 	
 	event = g_new0(JuiceEvent, 1);
 	event->event = output;
 	event->timestamp = timestamp;
 	
 	purple_debug_info("pidgin_juice", "Adding event: %s\n", output);
+	
+	
 	
 	//Add the event to the queue
 	g_queue_push_tail(&queue, event);
@@ -242,14 +253,14 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
 	escaped_message = g_strescape(message, "");
 	
-	timestamp = (gulong)time(NULL);
+	timestamp = (guint64)time(NULL) * 1000;
 	
 	output = g_strdup_printf("{ \"type\":\"received\","
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%lu }",
+							 "\"timestamp\":%" G_GUINT64_FORMAT " }",
 							 escaped_message,
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
@@ -278,14 +289,14 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
 	escaped_message = g_strescape(message, "");
 	
-	timestamp = (gulong)time(NULL);
+	timestamp = (guint64)time(NULL) * 1000;
 	
 	output = g_strdup_printf("{ \"type\":\"sent\","
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%lu }",
+							 "\"timestamp\":%" G_GUINT64_FORMAT " }",
 							 escaped_message,
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
@@ -310,13 +321,13 @@ buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_dat
 	
 	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
 	
-	timestamp = (gulong)time(NULL);
+	timestamp = (guint64)time(NULL) * 1000;
 	
 	output = g_strdup_printf("{ \"type\":\"typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%lu }", 
+							 "\"timestamp\":%" G_GUINT64_FORMAT " }", 
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
@@ -338,13 +349,14 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	
 	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
 	
-	timestamp = (gulong)time(NULL);
+	timestamp = (guint64)time(NULL) * 1000;
 	
 	output = g_strdup_printf("{ \"type\":\"not_typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
 							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%lu }", escaped_buddyname,
+							 "\"timestamp\":%" G_GUINT64_FORMAT " }",
+							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
 							 purple_account_get_username(account),
 							 timestamp);
@@ -428,7 +440,7 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 {
 	guint timeout;
 	JuiceChannel *chan;
-	gulong timestamp;
+	guint64 timestamp;
 	
 	purple_debug_info("pidgin_juice", "Client connected for events.\n");
 	
@@ -439,8 +451,8 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	
 	//Otherwise, store up the channel
 	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, channel);
-	timestamp = (gulong)strtoul((gchar *)g_hash_table_lookup($_GET, "timestamp"), NULL, 10);
-	purple_debug_info("pidgin_juice", "get events since: %lu\n", timestamp);
+	timestamp = g_ascii_strtoull((gchar *)g_hash_table_lookup($_GET, "timestamp"), NULL, 10);
+	purple_debug_info("pidgin_juice", "get events since: %" G_GUINT64_FORMAT "\n", timestamp);
 	
 	chan = g_new0(JuiceChannel, 1);
 	chan->channel = channel;
