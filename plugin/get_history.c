@@ -9,27 +9,20 @@
 
 
 static gchar *
-//juice_GET_history(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
 juice_GET_history(GHashTable *$_GET, gsize *length)
 {
 	PurpleAccount *account = NULL;
 	PurpleConversation *conv = NULL;
-	GList *history, *cur;
+	GList *history;
 	PurpleConvMessage *msg;
-	JsonObject *return_history;
-	JsonArray *json_messages;
-	JsonObject *json_message;
-	JsonNode *json_message_node, *json_history_node;
-	JsonNode *sender_node, *message_node, *timestamp_node, *type_node;
 	PurpleMessageFlags flags;
-	JsonNode *return_history_node;
-	JsonNode *buddyname_node, *proto_id_node, *proto_username_node;
-	gchar *output;
-	JsonGenerator *generator;
 	const gchar *buddyname = NULL;
 	const gchar *proto_id = NULL;
 	const gchar *proto_username = NULL;
 	gchar *escaped;
+	GString *history_output;
+	guint64 timestamp;
+	gboolean first;
 	
 	buddyname = (gchar *)g_hash_table_lookup($_GET, "buddyname");
 	proto_id = (gchar *)g_hash_table_lookup($_GET, "proto_id");
@@ -52,13 +45,12 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 	}
 	
 	history = purple_conversation_get_message_history(conv);
+	history_output = g_string_new("{\"history\":[");
 	
-	return_history = json_object_new();
-	json_messages = json_array_new();
-	
-	for(cur = history; cur; cur = g_list_next(cur))
+	first = TRUE;	
+	for(; history; history = g_list_next(history))
 	{
-		msg = cur->data;
+		msg = history->data;
 		
 		flags = purple_conversation_message_get_flags(msg);
 		if (flags & PURPLE_MESSAGE_SEND ||
@@ -71,71 +63,44 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 			continue;
 		}
 		
-		json_message = json_object_new();
+		if (first)
+			first = FALSE;
+		else
+			g_string_append_c(history_output, ',');
 		
-		sender_node = json_node_new(JSON_NODE_VALUE);
 		escaped = g_strescape(purple_conversation_message_get_sender(msg), "");
-		json_node_set_string(sender_node, escaped);
+		g_string_append_printf(history_output, "{\"sender\":\"%s\", ", escaped);
 		g_free(escaped);
-		json_object_add_member(json_message, "sender", sender_node);
 		
-		message_node = json_node_new(JSON_NODE_VALUE);
 		escaped = g_strescape(purple_conversation_message_get_message(msg), "");
-		json_node_set_string(message_node, escaped);
+		g_string_append_printf(history_output, "\"message\":\"%s\", ", escaped);
 		g_free(escaped);
-		json_object_add_member(json_message, "message", message_node);
 		
-		type_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_string(type_node,
-							 (flags & PURPLE_MESSAGE_RECV?"received":"sent"));
-		json_object_add_member(json_message, "type", type_node);
+		g_string_append_printf(history_output, "\"type\":\"%s\", ", 
+								(flags & PURPLE_MESSAGE_RECV?"received":"sent"));
 		
-		timestamp_node = json_node_new(JSON_NODE_VALUE);
-		json_node_set_int(timestamp_node, 
-							 purple_conversation_message_get_timestamp(msg));
-		json_object_add_member(json_message, "timestamp", timestamp_node);
+		timestamp = purple_conversation_message_get_timestamp(msg) * 1000; //we want in milliseconds
 		
-		json_message_node = json_node_new(JSON_NODE_OBJECT);
-		json_node_take_object(json_message_node, json_message);
-		json_array_add_element(json_messages, json_message_node);
+		g_string_append_printf(history_output, "\"timestamp\":%" G_GUINT64_FORMAT "}", 
+								timestamp);
 	}
 	
-	json_history_node = json_node_new(JSON_NODE_ARRAY);
-	json_node_take_array(json_history_node, json_messages);
-	json_object_add_member(return_history, "history", json_history_node);
-	
-	//gchar *buddyname, gchar *proto_id, gchar *proto_username
-	buddyname_node = json_node_new(JSON_NODE_VALUE);
 	escaped = g_strescape(buddyname, "");
-	json_node_set_string(buddyname_node, escaped);
+	g_string_append_printf(history_output, "],\"buddyname\":\"%s\", ", escaped);
 	g_free(escaped);
-	json_object_add_member(return_history, "buddyname", buddyname_node);
 	
-	proto_id_node = json_node_new(JSON_NODE_VALUE);
 	escaped = g_strescape(proto_id, "");
-	json_node_set_string(proto_id_node, escaped);
+	g_string_append_printf(history_output, "\"account_username\":\"%s\", ", escaped);
 	g_free(escaped);
-	json_object_add_member(return_history, "proto_id", proto_id_node);
 	
-	proto_username_node = json_node_new(JSON_NODE_VALUE);
 	escaped = g_strescape(proto_username, "");
-	json_node_set_string(proto_username_node, escaped);
+	g_string_append_printf(history_output, "\"proto_id\":\"%s\"}", escaped);
 	g_free(escaped);
-	json_object_add_member(return_history, "account_username", proto_username_node);
 	
-	return_history_node = json_node_new(JSON_NODE_OBJECT);
-	json_node_take_object(return_history_node, return_history);
-	
-	generator = json_generator_new();
-	json_generator_set_root(generator, return_history_node);
-	
-	output = json_generator_to_data(generator, NULL);
 	if (length != NULL)
-		*length = strlen(output);
-	
-	json_node_free(return_history_node);
-	
-	return output;
+		*length = history_output->len;
+
+	return g_string_free(history, FALSE);
 	
 }
 
