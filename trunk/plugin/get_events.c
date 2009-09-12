@@ -201,7 +201,7 @@ write_to_client(GIOChannel *channel)
 static void
 events_table_foreach_cb(gpointer key, gpointer value, gpointer user_data)
 {
-	purple_timeout_add(500, write_to_client, key);
+	purple_timeout_add(500, (GSourceFunc)write_to_client, key);
 	//write_to_client(key);
 }
 
@@ -371,7 +371,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 static void
 connect_to_signals()
 {
-    void *conv_handle = purple_conversations_get_handle();
+	void *conv_handle = purple_conversations_get_handle();
 	
 	purple_debug_info("pidgin_juice", "Connecting signals\n");
 	

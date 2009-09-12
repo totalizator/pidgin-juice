@@ -12,7 +12,6 @@
 static gchar *
 juice_GET_buddylist(const GHashTable *$_GET)
 {
-	gchar *output;
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
 	const char *status_message_unescaped;
