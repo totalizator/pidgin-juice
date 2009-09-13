@@ -7,8 +7,6 @@
  *
  */
 
-#include <json-glib/json-glib.h>
-
 static gchar *
 //juice_GET_buddyicon(gchar *buddyname, gchar *proto_id, gchar *proto_username, gsize *length)
 juice_GET_buddyicon(GHashTable *$_GET, gsize *length)
