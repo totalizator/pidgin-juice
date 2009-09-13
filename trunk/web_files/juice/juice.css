@@ -171,8 +171,8 @@ a.button.homeButton {
 	position: absolute;
 	bottom:0;
 	width: 320px;
-	height: 60px;
-	background-color: ;
+	height: 95px; /* 60px; */
+	background: url(/background_send_bar_full_no_button.png);
 }
 body[orientation=landscape] #chat div#send_bar {
 	width: 480px;
@@ -180,22 +180,27 @@ body[orientation=landscape] #chat div#send_bar {
 #chat #send_bar textarea {
 	font-size: 20px;
 	line-height: 20px;
-	height: 40px;
-	width: 260px;
+	height: 75px; /* 40px; */
+	width: 220px;
 	position: absolute;
+	left: 15px;
 	bottom: 0;
 	padding: 0;
-	margin: 0;
+	margin: 0 0 10px 0;
 	border: 0;
 	overflow: auto;
 }
 #chat #send_bar a {
 	position: absolute;
-	right: 0;
-	bottom: 0;
+	right: 7px;
+	bottom: 10px;
+	width: 62px;
+	height: 26px;
+	background: url(/send.png);
+	color:transparent;
 }
 #chat > ul {
-	padding-bottom: 60px;
+	padding-bottom: 95px; /* 60px; */
 	margin-left: 0; padding-left: 0;
 	list-style-type: none;
 }
