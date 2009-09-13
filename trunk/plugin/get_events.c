@@ -43,7 +43,8 @@ remove_old_events(gpointer dunno)
 	
 	purple_debug_info("pidgin_juice", "Remove old events from event queue\n");
 	
-	old_timestamp = time(NULL) - 3 * 60 * 1000; //3 minutes old
+	//old_timestamp = time(NULL) - 3 * 60 * 1000; //3 minutes old
+	old_timestamp = time(NULL)*1000 - 10 * 1000; //3 minutes old
 	while (!g_queue_is_empty(&queue))
 	{
 		event = g_queue_peek_head(&queue);
@@ -84,9 +85,15 @@ static GList
 	for(i=max_length-1; i>=0; i--)
 	{
 		event = g_queue_peek_nth(&queue, i);
-		if (event->timestamp <= time)
+		purple_debug_info("pidgin_juice", "comparing event timestamp %" G_GUINT64_FORMAT " against requested timestamp %" G_GUINT64_FORMAT "\n", event->timestamp, time);
+		if (event->timestamp <= time) {
+			purple_debug_info("pidgin_juice", "Found event with timestamp %" G_GUINT64_FORMAT " so not adding any more events to return list.\n", event->timestamp);
 			break;
-		returnlist = g_list_prepend(returnlist, event);
+		}
+		else {
+			purple_debug_info("pidgin_juice", "Adding event with timestamp %" G_GUINT64_FORMAT " to return list.\n", event->timestamp);
+			returnlist = g_list_prepend(returnlist, event);
+		}
 	}
 	
 	return returnlist;
@@ -184,7 +191,7 @@ write_to_client(GIOChannel *channel)
 	
 	g_string_prepend(returnstring, headers);
 	
-	//write_data(channel, G_IO_OUT, headers, strlen(headers));
+	purple_debug_info("pidgin_juice", "The following events are about to be written to client:\n%s\n", returnstring->str);
 	write_data(channel, G_IO_OUT, returnstring->str, returnstring->len + 1);
 	//g_io_channel_flush(channel, NULL);
 	
@@ -210,6 +217,7 @@ events_push_to_queue(gchar *output, guint64 timestamp)
 {
 	JuiceEvent *event;
 	JuiceEvent *lastevent;
+	GString *new_output = NULL;
 	
 	
 	lastevent = g_queue_peek_tail(&queue);
@@ -219,8 +227,13 @@ events_push_to_queue(gchar *output, guint64 timestamp)
 		timestamp = lastevent->timestamp + 1;
 	}
 	
+	new_output = g_string_new(NULL);
+	g_string_printf(new_output, "{\"timestamp\":%" G_GUINT64_FORMAT ",%s", timestamp, (output+1));
+	g_free(output);
+	purple_debug_info("purple_juice", "New event output: %s\n", new_output->str);
+	
 	event = g_new0(JuiceEvent, 1);
-	event->event = output;
+	event->event = g_string_free(new_output, FALSE);
 	event->timestamp = timestamp;
 	
 	purple_debug_info("pidgin_juice", "Adding event: %s\n", output);
@@ -259,13 +272,15 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%" G_GUINT64_FORMAT " }",
+							 "\"account_username\":\"%s\""
+							 //", \"timestamp\":%" G_GUINT64_FORMAT ""
+							 " }",
 							 escaped_message,
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
-							 purple_account_get_username(account),
-							 timestamp);
+							 purple_account_get_username(account)
+							 //, timestamp
+							 );
 	
 	events_push_to_queue(output, timestamp);
 	
@@ -295,13 +310,15 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 							 "\"message\":\"%s\", "
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%" G_GUINT64_FORMAT " }",
+							 "\"account_username\":\"%s\""
+							 //", \"timestamp\":%" G_GUINT64_FORMAT ""
+							 " }",
 							 escaped_message,
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
-							 purple_account_get_username(account),
-							 timestamp);
+							 purple_account_get_username(account)
+							 //, timestamp
+							 );
 	
 	events_push_to_queue(output, timestamp);
 	
@@ -326,12 +343,14 @@ buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_dat
 	output = g_strdup_printf("{ \"type\":\"typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%" G_GUINT64_FORMAT " }", 
+							 "\"account_username\":\"%s\""
+							 //", \"timestamp\":%" G_GUINT64_FORMAT ""
+							 " }", 
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
-							 purple_account_get_username(account),
-							 timestamp);
+							 purple_account_get_username(account)
+							 //, timestamp
+							 );
 	
 	events_push_to_queue(output, timestamp);
 	
@@ -354,12 +373,14 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	output = g_strdup_printf("{ \"type\":\"not_typing\","
 							 "\"buddyname\":\"%s\", "
 							 "\"proto_id\":\"%s\", "
-							 "\"account_username\":\"%s\", "
-							 "\"timestamp\":%" G_GUINT64_FORMAT " }",
+							 "\"account_username\":\"%s\""
+							 //", \"timestamp\":%" G_GUINT64_FORMAT ""
+							 " }",
 							 escaped_buddyname,
 							 purple_account_get_protocol_id(account),
-							 purple_account_get_username(account),
-							 timestamp);
+							 purple_account_get_username(account)
+							 //, timestamp
+							 );
 	
 	events_push_to_queue(output, timestamp);
 	
