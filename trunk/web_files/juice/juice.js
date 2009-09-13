@@ -77,6 +77,10 @@ var Buddies = {
 	},
 	
 	buddy_add_message: function(buddy, message) {
+		message.test = ["test"];
+		//alert(Json.encode(message.test));
+		message.test = "test";
+		//alert(Json.encode(message)); return;
 		if(buddy.messages == undefined)
 			buddy.messages = [];
 		buddy.messages.push(message);
@@ -116,6 +120,7 @@ var Ajax = {
 	
 		req.onreadystatechange = function() {
 			if(req.readyState == 4) {
+				//alert(req.status);
 				if(req.status == 200 && req.responseText) {
 					if(func != undefined)
 						func(req.responseText);
@@ -157,7 +162,12 @@ var Json = {
 		}
 	},
 	
-	encode: function(obj) {
+	encode: function(obj, depth) {
+		if (depth==undefined)
+			depth = 1;
+		if (depth !== 0)
+			alert(depth);
+		
 		if (typeof(obj) == "string")
 			return '"' + obj + '"';
 		else if (typeof(obj) == "number")
@@ -179,14 +189,20 @@ var Json = {
 		var response = '';
 		if (is_array) {
 			for(i=0; i<values.length; i++) {
-				response += ',' + this.escape(values[i]);
+				if (depth <= 0)
+					response += ',' + this.encode(null, 0);
+				else
+					response += ',' + this.encode(values[i], depth-1);
 			}
 			response = response.replace(/^,/, '');
 			response = '[' + response + ']';
 		}
 		else {
 			for(i=0; i<values.length; i++) {
-				response += ',"' + keys[i] + '":' + this.escape(values[i]);
+				if (depth <= 0)
+					response += ',"' + keys[i] + '":' + this.encode(null, 0);
+				else
+					response += ',"' + keys[i] + '":' + this.encode(values[i], depth-1);
 			}
 			response = response.replace(/^,/, '');
 			response = '{' + response + '}';
@@ -232,7 +248,7 @@ function send_bar_typing_callback(event) {
 	
 	send_message();
 	
-	event.target.blur();
+	//event.target.blur();
 	
 	return false;
 }
@@ -319,6 +335,7 @@ function show_chat(buddy) {
 	update_chat(buddy);
 	get_history(buddy);
 	change_page('chat', 1);
+	document.getElementById('send_bar').getElementsByTagName('textarea')[0].focus();
 }
 
 
@@ -448,6 +465,12 @@ function get_history(buddy) {
 var latest_event_timestamp = 0;
 function get_events() {
 	///get_events_timeout(60000);
+	latest_event_timestamp_magnitude = (latest_event_timestamp+"").length;
+	//alert(latest_event_timestamp_magnitude + "\n" + latest_event_timestamp);
+	if (latest_event_timestamp > 0 && latest_event_timestamp_magnitude <= 10) {
+		//alert("multiplying");
+		latest_event_timestamp = latest_event_timestamp * 1000;
+	}
 	Ajax.get('/events.js?timestamp='+latest_event_timestamp, get_events_callback);
 }
 
