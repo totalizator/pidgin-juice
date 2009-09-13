@@ -1,20 +1,24 @@
+html {
+	overflow: hidden;
+}
 body {
-    font-family: Helvetica;
-    background: #FFFFFF;
-    color: #000000;
-    overflow: hidden;
-    -webkit-text-size-adjust: none;
-    padding: 0;
-    margin: 0;
+	font-family: Helvetica;
+	background: #FFFFFF;
+	color: #000000;
+	overflow: hidden;
+	-webkit-text-size-adjust: none;
+	padding: 0;
+	margin: 0;
 	width: 320px;
 	
-	overflow:scroll;
+	overflow:hidden;
 }
 body[orientation=profile] {
 	background: grey;
 }
 body[orientation=landscape] {
 	background: blue;
+	width: 480px;
 }
 
 body > div {
@@ -35,7 +39,8 @@ body > div {
 	height:100%;
 }
 body[orientation=landscape] > div {
-	min-height: 268px;
+	min-height: 228px;
+	width: 480px;
 }
 /*
 body > div[selected=true] {
@@ -61,7 +66,6 @@ h1 {
     box-sizing: border-box;
     margin: 0;
     padding: 10px;
-	width: 300px;
     line-height: 20px;
     font-size: 20px;
     font-weight: bold;
@@ -71,6 +75,10 @@ h1 {
     color: #FFFFFF;
     background: #6d84a2 url(iPhoneToolbar.png)  repeat-x;
 	display: block;
+	width: 300px;
+}
+body[orientation=landscape] h1 {
+	width: 460px;
 }
 
 a.button {
@@ -156,12 +164,18 @@ a.button.homeButton {
 
 
 /* Chat */
+#chat {
+	background-color: #dbe2ed;
+}
 #chat div#send_bar {
 	position: absolute;
 	bottom:0;
 	width: 320px;
 	height: 60px;
-	background-color: yellow;
+	background-color: ;
+}
+body[orientation=landscape] #chat div#send_bar {
+	width: 480px;
 }
 #chat #send_bar textarea {
 	font-size: 20px;
@@ -192,13 +206,22 @@ a.button.homeButton {
 	margin-left: 0;
 	margin-right: auto;
 	min-height:33px;
-	width: 252px;
-	-webkit-border-image: url(/white_bubble.png) 15 15 17 15 / 15px 15px 17px 15px stretch stretch;
 }
 #chat > ul > li.sent {
-	-webkit-border-image: url(/green_bubble.png) 15 15 17 15 / 15px 15px 17px 15px stretch stretch;
 	left: auto;
 	right: 0;
 	margin-left: auto;
 	margin-right: 0;
+	text-align: right;
+
+}
+#chat > ul > li > span {
+	display: inline-block;
+	max-width: 252px;
+	text-align: left;
+	white-space: pre;
+	-webkit-border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
+}
+#chat > ul > li.sent > span {
+	-webkit-border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
 }

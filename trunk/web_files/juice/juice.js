@@ -46,6 +46,7 @@ var Buddies = {
 		
 		//update the buddy
 		buddy = this.get_buddy(buddyname, proto_id, account_username);
+		var i;
 		for(i in buddy_details) {
 			buddy[i] = buddy_details[i];
 		}
@@ -77,9 +78,9 @@ var Buddies = {
 	},
 	
 	buddy_add_message: function(buddy, message) {
-		message.test = ["test"];
+		//message.test = ["test"];
 		//alert(Json.encode(message.test));
-		message.test = "test";
+		//message.test = "test";
 		//alert(Json.encode(message)); return;
 		if(buddy.messages == undefined)
 			buddy.messages = [];
@@ -179,6 +180,7 @@ var Json = {
 		var keys = [];
 		var iterator = 0;
 		var is_array = true;
+		var i;
 		for(key in obj) {
 			if (key != iterator++ && key != length) {
 				is_array = false;
@@ -303,18 +305,23 @@ function update_chat(buddy) {
 	
 	escaping_div = document.createElement('div');
 	messages = buddy.get_messages();
+	var i;
 	for(i=0; i<messages.length; i++) {
 		li = document.createElement('li');
 		li.className = messages[i].type
+		span = document.createElement('span');
+		messages[i].message = messages[i].message.replace(/<BR>/ig, "\n");
 		escaping_div.innerHTML = messages[i].message;
-		if (li.textContent != undefined) {
-			li.textContent = escaping_div.textContent;
+		if (escaping_div.textContent != undefined) {
+			span.textContent = escaping_div.textContent;
 		}
 		else {
-			li.innerText = escaping_div.innerText;
+			span.innerText = escaping_div.innerText;
 		}
+		li.appendChild(span);
 		chat_ul.appendChild(li);
 	}
+	//delete escaping_div;
 	
 	//also update the contact page
 	contact = document.getElementById('contact');
@@ -392,7 +399,6 @@ function get_history_callback(response) {
 
 function get_events_callback(response) {
 	//alert(response);
-	get_events_timeout(3000);
 	
 	json = Json.decode(response);
 	
@@ -405,14 +411,17 @@ function get_events_callback(response) {
 		}
 	}
 	
-	for(i=0; i<json.events.length; i++) {
-		event = json.events[i];
+	get_events_timeout(3000);
+	
+	var j;
+	for(j=0; j<json.events.length; j++) {
+		event = json.events[j];
 		switch(event.type) {
 			case "sent" : 
 			case "received" : {
 				buddy = Buddies.get_buddy(event.buddyname, event.proto_id, event.account_username);
 				if(!buddy) {
-					alert("no such buddy "+events[i].buddyname+" to receive a message");
+					alert("no such buddy "+events[j].buddyname+" to receive a message");
 					continue;
 				}
 				buddy.add_message(event);
@@ -608,3 +617,5 @@ addEventListener("load", function(event){
 	setTimeout(get_events, 0);
 	setTimeout(current_page_init, 0);
 }, false);
+//debugging help
+window.chat = document.getElementById('chat');
