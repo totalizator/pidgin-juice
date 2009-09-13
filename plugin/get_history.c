@@ -100,7 +100,7 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 	if (length != NULL)
 		*length = history_output->len;
 
-	return g_string_free(history, FALSE);
+	return g_string_free(history_output, FALSE);
 	
 }
 
