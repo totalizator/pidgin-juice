@@ -6,7 +6,7 @@
  *  Copyright 2009 __MyCompanyName__. All rights reserved.
  *
  */
-
+#include <time.h>
 
 static gchar *
 juice_GET_history(GHashTable *$_GET, gsize *length)
@@ -21,6 +21,7 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 	const gchar *proto_username = NULL;
 	gchar *escaped;
 	GString *history_output;
+	time_t purple_timestamp;
 	guint64 timestamp;
 	gboolean first;
 	
@@ -79,21 +80,22 @@ juice_GET_history(GHashTable *$_GET, gsize *length)
 		g_string_append_printf(history_output, "\"type\":\"%s\", ", 
 								(flags & PURPLE_MESSAGE_RECV?"received":"sent"));
 		
-		timestamp = purple_conversation_message_get_timestamp(msg) * 1000; //we want in milliseconds
+		purple_timestamp = purple_conversation_message_get_timestamp(msg);
+		timestamp = purple_timestamp; //convert time_t to guint64
+		timestamp = timestamp * 1000; //we want milliseconds
 		
-		g_string_append_printf(history_output, "\"timestamp\":%" G_GUINT64_FORMAT "}", 
-								timestamp);
+		g_string_append_printf(history_output, "\"timestamp\":%" G_GUINT64_FORMAT "}", timestamp);
 	}
 	
 	escaped = g_strescape(buddyname, "");
 	g_string_append_printf(history_output, "],\"buddyname\":\"%s\", ", escaped);
 	g_free(escaped);
 	
-	escaped = g_strescape(proto_id, "");
+	escaped = g_strescape(proto_username, "");
 	g_string_append_printf(history_output, "\"account_username\":\"%s\", ", escaped);
 	g_free(escaped);
 	
-	escaped = g_strescape(proto_username, "");
+	escaped = g_strescape(proto_id, "");
 	g_string_append_printf(history_output, "\"proto_id\":\"%s\"}", escaped);
 	g_free(escaped);
 	
