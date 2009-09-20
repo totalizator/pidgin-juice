@@ -600,9 +600,10 @@ static GIOChannel *web_server = NULL;
 static void
 start_web_server()
 {
-	unsigned short int port = 8000;
+	unsigned short int port;
 	GIOChannel *listener;
 	
+	port = purple_prefs_get_int("/plugins/pidgin_juice/port");
 	listener = make_listener(port);
 	web_server = listener;
 	
@@ -648,6 +649,42 @@ plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
+static PurplePluginPrefFrame *
+get_plugin_pref_frame(PurplePlugin *plugin) {
+	PurplePluginPrefFrame *frame;
+	PurplePluginPref *ppref;
+
+	frame = purple_plugin_pref_frame_new();
+
+	ppref = purple_plugin_pref_new_with_label(_("Webserver Preferences"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/pidgin_juice/port",
+							_("Port to listen on"));
+	purple_plugin_pref_set_bounds(ppref, 2000, 65534);
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/pidgin_juice/password",
+							_("Password for server"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	return frame;
+}
+
+static PurplePluginUiInfo prefs_info = {
+	get_plugin_pref_frame,
+	0,   /* page_num (Reserved) */
+	NULL, /* frame (Reserved) */
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 static PurplePluginInfo info =
 {
 	PURPLE_PLUGIN_MAGIC,
@@ -675,8 +712,8 @@ static PurplePluginInfo info =
 
 	NULL,                                             /**< ui_info        */
 	NULL,                                             /**< extra_info     */
-	NULL,
-	NULL,
+	&prefs_info,                                      /**< prefs_info		*/
+	NULL,                                             /**< actions		*/
 
 	/* padding */
 	NULL,
@@ -689,7 +726,8 @@ static void
 init_plugin(PurplePlugin *plugin)
 {
 	purple_prefs_add_none("/plugins/pidgin_juice");
-	purple_prefs_add_int("/plugins/pidgin_juice/port", 0);
+	purple_prefs_add_int("/plugins/pidgin_juice/port", 8000);
+	purple_prefs_add_string("/plugins/pidgin_juice/password", "");
 }
 
 PURPLE_INIT_PLUGIN(pidgin_juice, init_plugin, info)
