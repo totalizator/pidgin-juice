@@ -44,6 +44,8 @@
 #include "prefs.h"
 #include "util.h"
 #include "version.h"
+#include "nat-pmp.h"
+#include "upnp.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
