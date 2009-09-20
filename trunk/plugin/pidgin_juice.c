@@ -602,10 +602,18 @@ start_web_server()
 {
 	unsigned short int port;
 	GIOChannel *listener;
+	gboolean use_upnp_or_pmp;
 	
 	port = purple_prefs_get_int("/plugins/pidgin_juice/port");
 	listener = make_listener(port);
 	web_server = listener;
+	
+	use_upnp_or_pmp = purple_prefs_get_bool("/plugins/pidgin_juice/upnp");
+	if (use_upnp_or_pmp)
+	{
+		purple_upnp_set_port_mapping(port, "TCP", NULL, NULL);
+		purple_pmp_create_map(PURPLE_PMP_TYPE_TCP, port, port, PURPLE_PMP_LIFETIME);
+	}
 	
 	//Tell the loop what to do when we receive a connection
 	g_io_add_watch(listener, G_IO_IN, (GIOFunc)accept_channel, NULL);
@@ -614,8 +622,19 @@ start_web_server()
 static void
 stop_web_server()
 {
+	unsigned short int port;
+	gboolean use_upnp_or_pmp;
+	
 	g_io_channel_shutdown(web_server, TRUE, NULL);
 	g_io_channel_unref(web_server);
+	
+	use_upnp_or_pmp = purple_prefs_get_bool("/plugins/pidgin_juice/upnp");
+	if (use_upnp_or_pmp)
+	{
+		port = purple_prefs_get_int("/plugins/pidgin_juice/port");
+		purple_upnp_remove_port_mapping(port, "TCP", NULL, NULL);
+		purple_pmp_destroy_map(PURPLE_PMP_TYPE_TCP, port);
+	}
 }
 
 /*
@@ -667,7 +686,12 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 
 	ppref = purple_plugin_pref_new_with_name_and_label(
 							"/plugins/pidgin_juice/password",
-							_("Password for server"));
+							_("Password for server (blank means no password)"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/pidgin_juice/upnp",
+							_("Use UPnP and/or NAT-PMP"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	return frame;
@@ -728,6 +752,7 @@ init_plugin(PurplePlugin *plugin)
 	purple_prefs_add_none("/plugins/pidgin_juice");
 	purple_prefs_add_int("/plugins/pidgin_juice/port", 8000);
 	purple_prefs_add_string("/plugins/pidgin_juice/password", "");
+	purple_prefs_add_bool("/plugins/pidgin_juice/upnp", TRUE);
 }
 
 PURPLE_INIT_PLUGIN(pidgin_juice, init_plugin, info)
