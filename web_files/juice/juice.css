@@ -13,12 +13,11 @@ body {
 	
 	overflow:hidden;
 }
-body[orientation=profile] {
-	background: grey;
+@media only screen and (orientation:portrait) {
+	body {background: grey;}
 }
-body[orientation=landscape] {
-	background: blue;
-	width: 480px;
+@media only screen and (orientation:landscape) {
+	body {background: green;}
 }
 
 body > div {
