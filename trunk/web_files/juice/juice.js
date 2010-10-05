@@ -52,8 +52,8 @@ var Buddies = {
 		}
 		
 		//update anything else that needs it
-		for(i=0; i<this.update_buddy_callbacks; i++) {
-			update_buddy_callbacks[i](buddy);
+		for(i=0; i<this.update_buddy_callbacks.length; i++) {
+			this.update_buddy_callbacks[i](buddy);
 		}
 	},
 	
@@ -126,6 +126,12 @@ var Ajax = {
 					if(func != undefined)
 						func(req.responseText);
 				}
+				else {
+					//alert("status: " + req.status);
+				}
+			}
+			else {
+				//alert("readyState: " + req.readyState);
 			}
 		};
 		
@@ -166,8 +172,8 @@ var Json = {
 	encode: function(obj, depth) {
 		if (depth==undefined)
 			depth = 1;
-		if (depth !== 0)
-			alert(depth);
+//		if (depth !== 0)
+//			alert(depth);
 		
 		if (typeof(obj) == "string")
 			return '"' + obj + '"';
@@ -381,7 +387,7 @@ function get_events_timeout(delay) {
 		//clearTimeout(events_timeout_long);
 	}
 	//events_timeout_long = setTimeout(function() {get_events(); events_timeout_long = 0;}, 60000);
-	events_timeout = setTimeout(function() {get_events(); events_timeout = 0;}, delay);
+	events_timeout = setTimeout(function() {get_events(); }, delay);
 }
 
 function get_history_callback(response) {
@@ -399,6 +405,10 @@ function get_history_callback(response) {
 
 function get_events_callback(response) {
 	//alert(response);
+	if (events_timeout !== 0) {
+		clearTimeout(events_timeout);
+	}
+	events_timeout = 0;
 	
 	json = Json.decode(response);
 	
@@ -410,8 +420,6 @@ function get_events_callback(response) {
 			}
 		}
 	}
-	
-	get_events_timeout(3000);
 	
 	var j;
 	for(j=0; j<json.events.length; j++) {
@@ -437,6 +445,18 @@ function get_events_callback(response) {
 	}
 }
 
+Buddies.add_update_buddy_callback(update_buddy_in_buddy_list);
+function update_buddy_in_buddy_list(buddy) {
+		var li = buddy.li;
+		var a = li.getElementsByTagName('a')[0];
+		a.innerHTML = buddy.display_name;
+		if (buddy.available) {
+			a.className = "";
+		}
+		else {
+			a.className = "away";
+		}
+}
 
 function add_buddy_to_buddies_list(buddy) {
 	contacts_ul = document.getElementById('contacts').getElementsByTagName('UL')[0];
@@ -461,8 +481,15 @@ function get_buddies_callback(response) {
 	json = Json.decode(response);
 	
 	for(i=0; i< json.buddies.length; i++) {
-		Buddies.add_buddy(json.buddies[i]);
-		add_buddy_to_buddies_list(json.buddies[i]);
+		buddy = Buddies.get_buddy(json.buddies[i]);
+		if (!buddy) {
+			Buddies.add_buddy(json.buddies[i]);
+			add_buddy_to_buddies_list(json.buddies[i]);
+		}
+		else {
+			//alert(Json.encode(json.buddies[i]));
+			Buddies.update_buddy(buddy, json.buddies[i]);
+		}
 	}
 }
 
@@ -473,7 +500,7 @@ function get_history(buddy) {
 
 var latest_event_timestamp = 0;
 function get_events() {
-	///get_events_timeout(60000);
+	get_events_timeout(60000);
 	latest_event_timestamp_magnitude = (latest_event_timestamp+"").length;
 	//alert(latest_event_timestamp_magnitude + "\n" + latest_event_timestamp);
 	if (latest_event_timestamp > 0 && latest_event_timestamp_magnitude <= 10) {
@@ -591,28 +618,10 @@ function tween_px_internal(el, property, direction, pv, sp, step, time) {
 	setTimeout(tween_px_internal, time, el, property, direction, pv, sp, step, time);
 }
 
-var currentWidth = 0;
-function check_orientation()
-{
-	if (window.innerWidth != currentWidth)
-	{
-		currentWidth = window.innerWidth;
-
-		var orientation = currentWidth == 320 ? "profile" : "landscape";
-		//debugging.. jeremy's computer
-		if (currentWidth == 1280)
-			orientation = "profile";
-		document.body.setAttribute("orientation", orientation);
-		document.body.className = orientation;
-		setTimeout(scrollTo, 10, 0,1);
-	}
-	setTimeout(check_orientation, 300);
-}
 
 
 
 addEventListener("load", function(event){
-	setTimeout(check_orientation, 300);
 	setTimeout(get_buddies, 0);
 	setTimeout(get_events, 0);
 	setTimeout(current_page_init, 0);
