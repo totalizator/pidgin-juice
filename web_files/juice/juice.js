@@ -11,6 +11,20 @@ var Buddies = {
 		this.init_buddy(buddy);
 	},
 	
+	remove_buddy: function(buddy) {
+		if (this.buddies_collection[buddy.buddyname] == undefined)
+			return;
+		for(j=0; j<this.buddies_collection[buddy.buddyname].length; j++)
+		{
+			if(this.buddies_collection[buddy.buddyname][j].proto_id == buddy.proto_id
+			  && this.buddies_collection[buddy.buddyname][j].account_username == buddy.account_username)
+			{
+				this.buddies_collection[buddy.buddyname].splice(j, 1);
+				break;
+			}
+		}
+	},
+	
 	get_buddy: function(buddyname, proto_id, account_username) {
 		if (typeof(buddyname) == "object") {
 			account_username = buddyname.account_username;
@@ -137,6 +151,8 @@ var Ajax = {
 		
 		req.open("GET", url, true);
 		req.send(null);
+		
+		return req;
 	},
 		
 	post: function (url, post_vars, func) {
@@ -270,10 +286,8 @@ function buddy_set_typing(buddy, is_typing) {
 	
 	chat = document.getElementById('chat');
 	lis = chat.getElementsByTagName('ul')[0];
-	buddy = get_buddy_from_collection(buddy);
 	if(chat.buddy != undefined) {
-		chatting_buddy = get_buddy_from_collection(chat.buddy);
-		if(buddy != chatting_buddy)
+		if(buddy != chat.buddy)
 			return;
 	}
 	//remove existing typing notifications if any
@@ -298,7 +312,9 @@ function buddy_set_typing(buddy, is_typing) {
 
 function update_chat(buddy) {
 	chat = document.getElementById('chat');
-	chat.buddy = buddy;
+	if (chat.buddy != buddy)
+		return;
+	/*chat.buddy = buddy;*/
 	
 	chat.getElementsByTagName('h1')[0].innerHTML = buddy.display_name;
 	
@@ -345,6 +361,8 @@ function update_chat(buddy) {
 
 Buddies.add_update_buddy_callback(update_chat);
 function show_chat(buddy) {
+	chat = document.getElementById('chat');
+	chat.buddy = buddy;
 	update_chat(buddy);
 	get_history(buddy);
 	change_page('chat', 1);
@@ -352,7 +370,16 @@ function show_chat(buddy) {
 }
 
 
-
+function scroll_to_bottom(buddy) {
+	chat = document.getElementById('chat');
+	if (chat.buddy != buddy)
+		return;
+	if (current_page != chat)
+		return;
+	
+	document.getElementById('send_bar').scrollIntoView(false);
+}
+Buddies.add_update_buddy_callback(scroll_to_bottom);
 
 
 /* DATA FUNCTIONS */
@@ -403,6 +430,7 @@ function get_history_callback(response) {
 	}
 }
 
+var unprocessed_events = [];
 function get_events_callback(response) {
 	//alert(response);
 	if (events_timeout !== 0) {
@@ -421,7 +449,11 @@ function get_events_callback(response) {
 		}
 	}
 	
+	json.events.join(unprocessed_events);
+	unprocessed_events = [];
+	
 	var j;
+	var needNewBuddyList = false;
 	for(j=0; j<json.events.length; j++) {
 		event = json.events[j];
 		switch(event.type) {
@@ -429,19 +461,39 @@ function get_events_callback(response) {
 			case "received" : {
 				buddy = Buddies.get_buddy(event.buddyname, event.proto_id, event.account_username);
 				if(!buddy) {
-					alert("no such buddy "+events[j].buddyname+" to receive a message");
-					continue;
+					//alert("no such buddy "+event.buddyname+" to receive a message");
+					needNewBuddyList = true;
+					unprocessed_events.push(event);
+					break;
 				}
 				buddy.add_message(event);
 				break;
 			}
 			case "typing" : {
+				buddy = Buddies.get_buddy(event.buddyname, event.proto_id, event.account_username);
+				if (!buddy) {
+					needNewBuddyList = true;
+					unprocessed_events.push(event);
+					break;
+				}
+				buddy_set_typing(buddy, true);
 				break;
 			}
 			case "not_typing" : {
+				buddy = Buddies.get_buddy(event.buddyname, event.proto_id, event.account_username);
+				if (!buddy) {
+					needNewBuddyList = true;
+					unprocessed_events.push(event);
+					break;
+				}
+				buddy_set_typing(buddy, false);
 				break;
 			}
 		}
+	}
+	if (needNewBuddyList)
+	{
+		get_buddies();
 	}
 }
 
@@ -468,7 +520,7 @@ function add_buddy_to_buddies_list(buddy) {
 		a.className = "away";
 	a.onclick = function(e){show_chat(buddy)};
 	img = document.createElement('IMG');
-	img.src = '/protocol/'+buddy.proto_id.replace(/prpl-/, '')+'.png';
+	img.src = '/protocol/'+buddy.prpl_icon+'.png';
 	li.appendChild(img);
 	li.appendChild(a);
 	contacts_ul.appendChild(li);
@@ -480,6 +532,7 @@ function add_buddy_to_buddies_list(buddy) {
 function get_buddies_callback(response) {
 	json = Json.decode(response);
 	
+	//var badBuddies = new Buddies;
 	for(i=0; i< json.buddies.length; i++) {
 		buddy = Buddies.get_buddy(json.buddies[i]);
 		if (!buddy) {
@@ -490,7 +543,24 @@ function get_buddies_callback(response) {
 			//alert(Json.encode(json.buddies[i]));
 			Buddies.update_buddy(buddy, json.buddies[i]);
 		}
+		//badBuddies.remove_buddy(buddy);
 	}
+	/*var chat = document.getElementById('chat');
+	for(i in badBuddies.buddies_collection)
+	{
+		for(j=0; j<badBuddies.buddies_collection[i].length; j++)
+		{
+			var buddy = badBuddies.buddies_collection[i][j];
+			buddy.li.parentNode.removeChild(buddy.li);
+			if (chat.buddy == Buddies.get_buddy(buddy))
+			{
+				if (current_page == chat)
+					change_page("contacts", -1);
+				chat.buddy = null;
+			}
+			Buddies.remove_buddy(buddy);
+		}
+	}*/
 }
 
 function get_history(buddy) {
@@ -498,7 +568,9 @@ function get_history(buddy) {
 	Ajax.get(url, get_history_callback);
 }
 
+
 var latest_event_timestamp = 0;
+var eventRequest = 0;
 function get_events() {
 	get_events_timeout(60000);
 	latest_event_timestamp_magnitude = (latest_event_timestamp+"").length;
@@ -507,8 +579,15 @@ function get_events() {
 		//alert("multiplying");
 		latest_event_timestamp = latest_event_timestamp * 1000;
 	}
-	Ajax.get('/events.js?timestamp='+latest_event_timestamp, get_events_callback);
+	eventRequest = Ajax.get('/events.js?timestamp='+latest_event_timestamp, get_events_callback);
 }
+function checkEventRequestStatus() {
+	if (!eventRequest)
+		return;
+	if (eventRequest.readyState == 4)
+		get_events();
+}
+setInterval(checkEventRequestStatus, 1000);
 
 function get_buddies() {
 	Ajax.get('buddies_list.js', get_buddies_callback);
@@ -568,16 +647,16 @@ function change_page(to, direction) {
 		to_page.style.zIndex = '1';
 		to_page.style.left = '-320px';
 		to_page.style.display = 'block';
-		start_tween_px(current_page, 'left', 320);
-		start_tween_px(to_page, 'left', 0);
+		//start_tween_px(current_page, 'left', 320);
+		//start_tween_px(to_page, 'left', 0);
 	}
 	else if (direction > 0) {
 		current_page.style.zIndex = '0';
 		to_page.style.zIndex = '1';
 		to_page.style.left = '320px';
 		to_page.style.display = 'block';
-		start_tween_px(current_page, 'left', -320);
-		start_tween_px(to_page, 'left', 0);
+		//start_tween_px(current_page, 'left', -320);
+		//start_tween_px(to_page, 'left', 0);
 	}
 	else {
 		to_page.style.left = '0px';
