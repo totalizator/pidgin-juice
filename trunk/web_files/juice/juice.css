@@ -9,15 +9,9 @@ body {
 	-webkit-text-size-adjust: none;
 	padding: 0;
 	margin: 0;
-	width: 320px;
+	/*width: 320px;*/
 	
 	overflow:hidden;
-}
-@media only screen and (orientation:portrait) {
-	body {background: grey;}
-}
-@media only screen and (orientation:landscape) {
-	body {background: green;}
 }
 
 body > div {
@@ -34,12 +28,8 @@ body > div {
 	
 	min-height: 376px;
 	padding-top: 40px;
-	
+	-webkit-transition: left 0.5 ease-in-out;
 	height:100%;
-}
-body[orientation=landscape] > div {
-	min-height: 228px;
-	width: 480px;
 }
 /*
 body > div[selected=true] {
@@ -76,16 +66,16 @@ h1 {
 	display: block;
 	width: 300px;
 }
-body[orientation=landscape] h1 {
-	width: 460px;
-}
 
 a.button {
     position: absolute;
     top: 8px;
     right: 6px;
     -webkit-border-image: url(iPhoneButton.png) 0 5 0 5;
+    -moz-border-image: url(iPhoneButton.png) 0 5 0 5;
+    border-image: url(iPhoneButton.png) 0 5 0 5;
     -webkit-border-radius: 0;
+    border-radius: 0;
     border-width: 0 5px 0 5px;
     padding: 0;
     height: 28px;
@@ -102,6 +92,8 @@ a.button.homeButton {
     left: 6px;
     right: auto;
     -webkit-border-image: url(iPhoneBackButton.png) 0 8 0 14;
+    -moz-border-image: url(iPhoneBackButton.png) 0 8 0 14;
+    border-image: url(iPhoneBackButton.png) 0 8 0 14;
     border-width: 0 8px 0 14px;
 }
 
@@ -140,8 +132,11 @@ a.button.homeButton {
 }
 #contacts ul li .unread {
 	color: red;
-	float: left;
     padding: 8px 8px;
+	position: absolute;
+	right: 50px;
+	font-variant: small-caps;
+	font-size: .8em;
 }
 #contacts > ul > li > img {
 	margin: 12px 32px 2px 2px;
@@ -169,12 +164,9 @@ a.button.homeButton {
 #chat div#send_bar {
 	position: absolute;
 	bottom:0;
-	width: 320px;
+	width: 100%;
 	height: 95px; /* 60px; */
 	background: url(/background_send_bar_full_no_button.png);
-}
-body[orientation=landscape] #chat div#send_bar {
-	width: 480px;
 }
 #chat #send_bar textarea {
 	font-size: 20px;
@@ -188,6 +180,7 @@ body[orientation=landscape] #chat div#send_bar {
 	margin: 0 0 10px 0;
 	border: 0;
 	overflow: auto;
+	font-family: sans-serif;
 }
 #chat #send_bar a {
 	position: absolute;
@@ -221,11 +214,46 @@ body[orientation=landscape] #chat div#send_bar {
 }
 #chat > ul > li > span {
 	display: inline-block;
-	max-width: 252px;
 	text-align: left;
-	white-space: pre;
+	white-space: pre-wrap;
+	max-width: 252px;
 	-webkit-border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
+	-moz-border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
+	border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
 }
 #chat > ul > li.sent > span {
 	-webkit-border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
+	-moz-border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
+	border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
 }
+
+#chat > ul > li.typing {
+	text-align: center;
+	color: #888888;
+	padding-bottom: 0;
+	font-weight: bold;
+	font-variant: small-caps;
+	overflow: visible;
+	position: absolute;
+	width: 100%;
+}
+
+/*@media only screen and (orientation:landscape) and (max-width: 480px) {
+	body {
+		background: green;
+		width: 480px;
+	}
+	body #chat div#send_bar {
+		width: 480px;
+	}
+	body > div {
+		min-height: 228px;
+		width: 480px;
+	}
+	body h1 {
+		width: 460px;
+	}
+}
+@media only screen and (orientation:portrait) {
+	body {background: grey;}
+}*/
