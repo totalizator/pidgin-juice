@@ -44,7 +44,7 @@ remove_old_events(gpointer dunno)
 	purple_debug_info("pidgin_juice", "Remove old events from event queue\n");
 	
 	//old_timestamp = time(NULL) - 3 * 60 * 1000; //3 minutes old
-	old_timestamp = time(NULL)*1000 - 10 * 1000; //3 minutes old
+	old_timestamp = ((guint64)time(NULL)) * 1000 - 10 * 1000; //3 minutes old
 	while (!g_queue_is_empty(&queue))
 	{
 		event = g_queue_peek_head(&queue);
@@ -185,7 +185,7 @@ write_to_client(GIOChannel *channel)
 	
 	returnstring = g_string_append(returnstring, " ] }");
 	
-	headers = g_strdup_printf("HTTP/1.0 200 OK\r\n"
+	headers = g_strdup_printf(
 					   "Content-type: application/json\r\n"
 					   "Content-length: %d\r\n\r\n", returnstring->len);
 	
@@ -235,10 +235,7 @@ events_push_to_queue(gchar *output, guint64 timestamp)
 	event = g_new0(JuiceEvent, 1);
 	event->event = g_string_free(new_output, FALSE);
 	event->timestamp = timestamp;
-	
-	purple_debug_info("pidgin_juice", "Adding event: %s\n", output);
-	
-	
+		
 	
 	//Add the event to the queue
 	g_queue_push_tail(&queue, event);
@@ -462,6 +459,9 @@ juice_GET_events(GIOChannel *channel, GHashTable *$_GET)
 	guint timeout;
 	JuiceChannel *chan;
 	guint64 timestamp;
+	
+	
+	write_data(channel, G_IO_OUT, "HTTP/1.0 200 OK\r\n", 17);
 	
 	purple_debug_info("pidgin_juice", "Client connected for events.\n");
 	
