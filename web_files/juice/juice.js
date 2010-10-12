@@ -520,6 +520,7 @@ function add_buddy_to_buddies_list(buddy) {
 		a.className = "away";
 	a.onclick = function(e){show_chat(buddy)};
 	img = document.createElement('IMG');
+	img.onerror = function(){ this.style.display='none'; };
 	img.src = '/protocol/'+buddy.prpl_icon+'.png';
 	li.appendChild(img);
 	li.appendChild(a);
