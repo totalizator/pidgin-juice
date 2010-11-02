@@ -56,6 +56,9 @@
 #include <arpa/inet.h>
 #endif
 
+#ifndef _
+#define	_(a) (a)
+#endif
 
 static gboolean write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_length);
 
@@ -237,6 +240,8 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 			
 			return_code = TRUE;
 		}
+		g_io_channel_shutdown(file_channel, TRUE, NULL);
+		g_string_free(filename, TRUE);
 	}
 	if (*resource_out == NULL)
 	{
@@ -245,8 +250,6 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	}
 	purple_debug_info("pidgin_juice", "Return code: %d\n", return_code);
 	
-	g_io_channel_shutdown(file_channel, TRUE, NULL);
-	g_string_free(filename, TRUE);
 	g_hash_table_destroy($_GET);
 	
 	return return_code;
@@ -281,7 +284,7 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 		return FALSE;
 	}
 	
-	temp_substr = strstr(request_string->str, " HTTP/1.1");
+	temp_substr = strstr(request_string->str, " HTTP/1.");
 	if (temp_substr == NULL) {
 		reply_string = g_string_new(NULL);
 		g_string_append(reply_string, "HTTP/1.1 400 Bad Request\n");
@@ -369,14 +372,16 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 			{
 				g_string_append(reply_string, "Cache-Control: public\r\n");
 				g_string_append(reply_string, "Pragma: cache\r\n");
-				g_string_append(reply_string, "Expires: Tue, 01 Oct 2009 16:00:00 GMT\r\n");
+				g_string_append(reply_string, "Expires: Tue, 01 Oct 2020 16:00:00 GMT\r\n");
 			}
 		}
-		else if (g_strrstr(path->str, ".js") != NULL && strlen(g_strrstr(path->str, ".js")) == 4)
+		else if (g_strrstr(path->str, ".js") != NULL && strlen(g_strrstr(path->str, ".js")) == 3)
 		{
 				g_string_append(reply_string, "Cache-Control: no-cache\r\n");
+				g_string_append(reply_string, "Content-type: text/javascript; charset=utf-8\r\n");
 				g_string_append(reply_string, "Pragma: No-cache\r\n");
 				g_string_append(reply_string, "Expires: Tue, 01 Sep 2000 16:00:00 GMT\r\n");
+				purple_debug_info("pidgin_juice", "reply string: %*s\n", reply_string->len, reply_string->str);
 		}
 		else {
 			g_string_append(reply_string, "Cache-Control: public\r\n");
@@ -401,7 +406,7 @@ process_request(GString *request_string, GIOChannel *channel, gchar **reply_out,
 		//purple_debug_info("pidgin_juice", "reply string1: %d\n", *reply_out_length);
 		//return TRUE;
 		
-		purple_debug_info("pidgin_juice", "reply string: %*s\n", *reply_out_length, *reply_out);
+		//purple_debug_info("pidgin_juice", "reply string: %*s\n", *reply_out_length, *reply_out);
 		//purple_debug_info("pidgin_juice", "resource: %s\n", resource);
 		
 		g_string_free(reply_string, TRUE);
@@ -426,6 +431,8 @@ write_data (GIOChannel *gio, GIOCondition condition, gpointer data, gsize data_l
 
 	purple_debug_info("pidgin_juice", "data_length: %d\n", data_length);
 	//g_io_channel_flush(gio, NULL);
+	
+	g_io_channel_read_to_end(gio, NULL, NULL, NULL);
 	
 	//ret = g_io_channel_write_chars (gio, ((gchar *)data+start), data_length, &len, &err);
 	while (bytes_written < data_length && (status == G_IO_STATUS_NORMAL || status == G_IO_STATUS_AGAIN) && err == NULL)

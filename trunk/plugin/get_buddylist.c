@@ -10,13 +10,62 @@
 #include <blist.h>
 
 static gchar *
+juice_utf8_json_encode(const gchar *str)
+{
+	GString *out;
+	gunichar wc;
+	
+	out = g_string_new(NULL);
+	
+	for (; *str; str = g_utf8_next_char(str))
+	{
+		wc = g_utf8_get_char(str);
+		
+		if (wc == '"' || wc == '/' || wc == '\\')
+		{
+			g_string_append_c(out, '\\');
+			g_string_append_unichar(out, wc);
+		}
+		else if (wc == '\t')
+		{
+			g_string_append(out, "\\t");
+		}
+		else if (wc == '\r')
+		{
+			g_string_append(out, "\\r");
+		}
+		else if (wc == '\n')
+		{
+			g_string_append(out, "\\n");
+		}
+		else if (wc == '\f')
+		{
+			g_string_append(out, "\\f");
+		}
+		else if (wc == '\b')
+		{
+			g_string_append(out, "\\b");
+		}
+		else if (wc >= 0x80 || wc < 0x20)
+		{
+			g_string_append_printf(out, "\\u%04X", (guint16)wc);
+		}
+		else
+		{
+			g_string_append_unichar(out, wc);
+		}
+	}
+	return g_string_free(out, FALSE);
+}
+
+static gchar *
 juice_GET_buddylist(const GHashTable *$_GET)
 {
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
 	const char *status_message_unescaped;
 	gchar *status_message;
-	const gchar *display_name;
+	const gchar *display_name, *display_name_tmp;
 	const gchar *buddyname;
 	PurpleBuddyIcon *icon;
 	PurpleStatus *status;
@@ -63,13 +112,21 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		display_name = purple_buddy_get_alias(buddy);
 		buddyname = purple_buddy_get_name(buddy);
 		icon = purple_buddy_get_icon(buddy);
+
+		//display_name = g_strdup(display_name);
+		//purple_util_chrreplace(display_name, "\\", "\\\\");
+		//display_name_tmp = purple_utf8_ncr_encode(display_name);
+		//g_free(display_name);
+		//display_name = g_strescape(display_name_tmp, "\\");
+		//g_free(display_name_tmp);
+		display_name = juice_utf8_json_encode(display_name);
 		
 		status = purple_presence_get_active_status(purple_buddy_get_presence(buddy));
 		status_message_unescaped = purple_status_get_attr_string (status, "message");
 		if (status_message_unescaped == NULL)
 			status_message = g_strdup("");
 		else
-			status_message = g_strescape(status_message_unescaped, "");
+			status_message = juice_utf8_json_encode(status_message_unescaped);
 		available = purple_status_is_available(status);
 		
 		account = purple_buddy_get_account(buddy);
@@ -95,6 +152,8 @@ juice_GET_buddylist(const GHashTable *$_GET)
 									  	prpl_icon, (available?"true":"false"),
 									  	status_message, proto_id,
 									  	proto_name, account_username);
+		g_free(status_message);
+		g_free(display_name);
 	}
 	
 	g_string_append(blist, "]}");
