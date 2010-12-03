@@ -67,6 +67,7 @@ static gboolean write_data (GIOChannel *gio, GIOCondition condition, gpointer da
 #include "get_history.c"
 #include "post_sendim.c"
 #include "get_events.c"
+#include "get_conversations.c"
 
 static GHashTable
 *parse_query(const gchar *query) {
@@ -196,6 +197,13 @@ get_resource(GString *path, GString *query, gchar **resource_out, gsize *resourc
 	else if (strcmp(path->str, "/buddies_list.js") ==0)
 	{
 		json_string = juice_GET_buddylist($_GET);
+		*resource_out = json_string;
+		*resource_out_length = strlen(json_string);
+		return_code = TRUE;
+	}
+	else if (strcmp(path->str, "/conversations.js") ==0)
+	{
+		json_string = juice_GET_conversations($_GET);
 		*resource_out = json_string;
 		*resource_out_length = strlen(json_string);
 		return_code = TRUE;
