@@ -86,9 +86,9 @@ juice_GET_buddylist(const GHashTable *$_GET)
 		purple_blist_node;
 		purple_blist_node = purple_blist_node_next(purple_blist_node, FALSE))
 	{
-		if (PURPLE_BLIST_NODE_IS_BUDDY(purple_blist_node))
+		if (PURPLE_BLIST_NODE_IS_CONTACT(purple_blist_node))
 		{
-			buddy = (PurpleBuddy *)purple_blist_node;
+			buddy = purple_contact_get_priority_buddy((PurpleContact *) purple_blist_node);
 		} else {
 			continue;
 		}
