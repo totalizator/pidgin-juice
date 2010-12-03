@@ -174,6 +174,10 @@ var Ajax = {
 
 var Json = {
 	decode: function(text) {
+		try {
+		if (window.JSON && JSON.parse)
+			return JSON.parse(text);
+		} catch (e) {}
 		if (window.parseJSON == undefined) {
 			text = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
 			return !(/[^,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/.test(
@@ -186,6 +190,8 @@ var Json = {
 	},
 	
 	encode: function(obj, depth) {
+		if (window.JSON && JSON.stringify)
+			return JSON.stringify(obj);
 		if (depth==undefined)
 			depth = 1;
 //		if (depth !== 0)
