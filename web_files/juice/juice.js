@@ -398,10 +398,10 @@ function send_message() {
 	textarea.value = "";
 	
 	page += '?';
-	page += 'buddyname='+escape(buddy.buddyname)+'&username='+escape(buddy.buddyname); //backward compatibility
-	page += '&proto_id='+escape(buddy.proto_id);
-	page += '&account_username='+escape(buddy.account_username);
-	page += '&message='+escape(message);
+	page += 'buddyname='+encodeURIComponent(buddy.buddyname)+'&username='+encodeURIComponent(buddy.buddyname); //backward compatibility
+	page += '&proto_id='+encodeURIComponent(buddy.proto_id);
+	page += '&account_username='+encodeURIComponent(buddy.account_username);
+	page += '&message='+encodeURIComponent(message);
 	
 	//This is currently using both POST and GET. Probably only the GET values are
 	//being read server-side.
