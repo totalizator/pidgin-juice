@@ -71,9 +71,10 @@ a.button {
     position: absolute;
     top: 8px;
     right: 6px;
-    -webkit-border-image: url(iPhoneButton.png) 0 5 0 5;
-    -moz-border-image: url(iPhoneButton.png) 0 5 0 5;
-    border-image: url(iPhoneButton.png) 0 5 0 5;
+    -webkit-border-image: url(iPhoneButton.png) 0 5 0 5 fill;
+    -moz-border-image: url(iPhoneButton.png) 0 5 0 5 fill;
+    -o-border-image: url(iPhoneButton.png) 0 5 0 5 fill;
+    border-image: url(iPhoneButton.png) 0 5 0 5 fill;
     -webkit-border-radius: 0;
     border-radius: 0;
     border-width: 0 5px 0 5px;
@@ -91,9 +92,10 @@ a.button {
 a.button.homeButton {
     left: 6px;
     right: auto;
-    -webkit-border-image: url(iPhoneBackButton.png) 0 8 0 14;
-    -moz-border-image: url(iPhoneBackButton.png) 0 8 0 14;
-    border-image: url(iPhoneBackButton.png) 0 8 0 14;
+    -webkit-border-image: url(iPhoneBackButton.png) 0 8 0 14 fill;
+    -moz-border-image: url(iPhoneBackButton.png) 0 8 0 14 fill;
+    -o-border-image: url(iPhoneBackButton.png) 0 8 0 14 fill;
+    border-image: url(iPhoneBackButton.png) 0 8 0 14 fill;
     border-width: 0 8px 0 14px;
 }
 
@@ -181,6 +183,11 @@ a.button.homeButton {
 	border: 0;
 	overflow: auto;
 	font-family: sans-serif;
+	background: transparent;
+	resize: none;
+}
+#chat #send_bar textarea:focus {
+	outline: 0px none transparent;
 }
 #chat #send_bar a {
 	position: absolute;
@@ -217,14 +224,18 @@ a.button.homeButton {
 	text-align: left;
 	white-space: pre-wrap;
 	max-width: 252px;
-	-webkit-border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
-	-moz-border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
-	border-image: url(/white_bubble.png) 15 15 17 20 / 15px 15px 17px 20px stretch stretch;
+	-webkit-border-image: url(white_bubble.png) 13 14 10 21 fill stretch;
+	-moz-border-image: url(white_bubble.png) 13 14 10 21 fill stretch;
+	-o-border-image: url(white_bubble.png) 13 14 10 21 fill stretch;
+	border-image: url(white_bubble.png) 13 14 10 21 fill stretch;
+	border-width: 13px 14px 10px 21px;
 }
 #chat > ul > li.sent > span {
-	-webkit-border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
-	-moz-border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
-	border-image: url(/green_bubble.png) 15 20 17 15 / 15px 20px 17px 15px stretch stretch;
+	-webkit-border-image: url(green_bubble.png) 13 21 10 14 fill stretch;
+	-moz-border-image: url(green_bubble.png) 13 21 10 14 fill stretch;
+	-o-border-image: url(green_bubble.png) 13 21 10 14 fill stretch;
+	border-image: url(green_bubble.png) 13 21 10 14 fill stretch;
+	border-width: 13px 21px 10px 14px;
 }
 
 #chat > ul > li.typing {
