@@ -19,13 +19,13 @@ MACPORT_CFLAGS = -I/opt/local/include/libpurple -DPURPLE_PLUGINS -DENABLE_NLS -D
 
 DEB_PACKAGE_DIR = ./debdir
 
-FACEBOOK_SOURCES = pidgin_juice.c
+FACEBOOK_SOURCES = juice.c
 
 #Standard stuff here
 .PHONY:	all clean install sourcepackage
 
 #all:	libfacebook.so libfacebook.dll libfacebook64.so libfacebookarm.so libfacebookppc.so installers sourcepackage
-all:	pidgin_juice.so
+all:	juice.so
 
 #install:
 #	cp libfacebook.so /usr/lib/purple-2/
@@ -42,12 +42,12 @@ all:	pidgin_juice.so
 #	rm -f libfacebook.so libfacebook.dll libfacebook64.so libfacebookarm.so libfacebookppc.so pidgin-facebookchat.exe pidgin-facebookchat.deb pidgin-facebookchat.tar.bz2 pidgin-facebookchat-source.tar.bz2
 #	rm -rf pidgin-facebookchat
 
-pidgin_juice.so:	${FACEBOOK_SOURCES}
-	${LINUX32_COMPILER} ${LIBPURPLE_CFLAGS} -Wall ${GLIB_CFLAGS} -I. -g -O2 -pipe ${FACEBOOK_SOURCES} -o pidgin_juice.so -shared -fPIC -DPIC
+juice.so:	${FACEBOOK_SOURCES}
+	${LINUX32_COMPILER} ${LIBPURPLE_CFLAGS} -Wall ${GLIB_CFLAGS} -I. -g -O2 -pipe ${FACEBOOK_SOURCES} -o juice.so -shared -fPIC -DPIC
 
-pidgin_juice.dll:	${FACEBOOK_SOURCES}
+juice.dll:	${FACEBOOK_SOURCES}
 	${WIN32_COMPILER} ${LIBPURPLE_CFLAGS} -Wall -I. -g -O2 -pipe ${FACEBOOK_SOURCES} -o $@ -shared -mno-cygwin ${WIN32_CFLAGS} ${WIN32_LIBS}
-	upx pidgin_juice.dll
+	upx juice.dll
 
 #libfacebookarm.so:	${FACEBOOK_SOURCES}
 #	${LINUX_ARM_COMPILER} ${LIBPURPLE_CFLAGS} -Wall ${GLIB_CFLAGS} -I. -g -O2 -pipe ${FACEBOOK_SOURCES} -o libfacebookarm.so -shared -fPIC -DPIC
