@@ -580,8 +580,21 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	listen_data = purple_network_listen_family(purple_prefs_get_int(PREF_PORT), AF_INET, SOCK_STREAM, juice_listen_callback, NULL);
+	gint port;
 	
+	port = purple_prefs_get_int(PREF_PORT);
+	if (port > 0)
+	{
+		listen_data = purple_network_listen_family(port, AF_INET, SOCK_STREAM, juice_listen_callback, NULL);		
+		if (listen_data == NULL)
+		{
+			gchar *port_error_msg = g_strdup_printf("Unable to listen on port %d\n", port);
+			purple_notify_error(plugin, "Error opening port", port_error_msg, "Try changing the port number in preferences");
+			g_free(port_error_msg);
+		}
+	}
+	
+	// I'd love to return FALSE here, but then we couldn't configure any settings :(
 	return TRUE;
 }
 
