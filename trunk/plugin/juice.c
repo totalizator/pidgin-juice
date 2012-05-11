@@ -7,7 +7,8 @@
 #include <glib/gi18n.h>
 #include <sys/types.h>
 #ifdef __GNUC__
-	#include <unistd.h>
+#include	<unistd.h>
+#include	<fcntl.h>
 #endif
 
 #ifndef G_GNUC_NULL_TERMINATED
