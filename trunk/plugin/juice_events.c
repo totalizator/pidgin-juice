@@ -14,11 +14,13 @@ struct _ConnectedSignals {
 	guint clear_old_events_timer;
 	
 	gulong received_im_signal;
+	gulong received_chat_signal;
 	gulong buddy_typing_signal;
 	gulong buddy_typing_stopped_signal;
 	gulong sent_im_signal;
+	gulong sent_chat_signal;
 };
-static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0,0};
+static struct _ConnectedSignals ConnectedSignals = {0,0,0,0,0,0,0,0};
 typedef struct _JuiceEvent {
 	gchar *event;
 	guint64 timestamp;
@@ -102,6 +104,12 @@ disconnect_signals_cb(gpointer data)
 	purple_debug_info("pidgin_juice", "Disconnecting signals\n");
 	
 	purple_signals_disconnect_by_handle(&ConnectedSignals);
+	ConnectedSignals.disconnect_timer = 0;
+	ConnectedSignals.clear_old_events_timer = 0;
+	ConnectedSignals.received_im_signal = 0;
+	ConnectedSignals.buddy_typing_signal = 0;
+	ConnectedSignals.buddy_typing_stopped_signal = 0;
+	ConnectedSignals.sent_im_signal = 0;
 	
 	while((event = g_queue_pop_head(&queue)))
 	{
@@ -252,8 +260,8 @@ received_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	if (!buddyname || !message)
 		return;
 	
-	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
-	escaped_message = g_strescape(message, "");
+	escaped_buddyname = juice_utf8_json_encode(purple_normalize(account, buddyname));
+	escaped_message = juice_utf8_json_encode(message);
 	
 	timestamp = (guint64)time(NULL) * 1000;
 	
@@ -290,8 +298,8 @@ sent_im_msg_cb(PurpleAccount *account, char *buddyname, char *message,
 	if (!buddyname || !message)
 		return;
 	
-	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
-	escaped_message = g_strescape(message, "");
+	escaped_buddyname = juice_utf8_json_encode(purple_normalize(account, buddyname));
+	escaped_message = juice_utf8_json_encode(message);
 	
 	timestamp = (guint64)time(NULL) * 1000;
 	
@@ -325,7 +333,7 @@ buddy_typing_cb(PurpleAccount *account, const char *buddyname, gpointer user_dat
 	if (!buddyname)
 		return;
 	
-	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
+	escaped_buddyname = juice_utf8_json_encode(purple_normalize(account, buddyname));
 	
 	timestamp = (guint64)time(NULL) * 1000;
 	
@@ -355,7 +363,7 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	if (!buddyname)
 		return;
 	
-	escaped_buddyname = g_strescape(purple_normalize(account, buddyname), "");
+	escaped_buddyname = juice_utf8_json_encode(purple_normalize(account, buddyname));
 	
 	timestamp = (guint64)time(NULL) * 1000;
 	
@@ -376,7 +384,85 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *buddyname, gpointer 
 	g_free(escaped_buddyname);
 }
 
-
+static void 
+received_chat_msg_cb(PurpleAccount *account, char *sender, char *message, PurpleConversation *conv, PurpleMessageFlags flags)
+{
+	gchar *output;
+	gchar *escaped_buddyname;
+	gchar *escaped_message;
+	gchar *escaped_chatname;
+	guint64 timestamp;
+	
+	if (!sender || !message)
+		return;
+	
+	escaped_buddyname = juice_utf8_json_encode(purple_normalize(account, sender));
+	escaped_message = juice_utf8_json_encode(message);
+	escaped_chatname = juice_utf8_json_encode(purple_conversation_get_name(conv));
+	
+	timestamp = (guint64)time(NULL) * 1000;
+	
+	output = g_strdup_printf("{ \"type\":\"received_chat\","
+							 "\"message\":\"%s\", "
+							 "\"buddyname\":\"%s\", "
+							 "\"chatname\":\"%s\", "
+							 "\"proto_id\":\"%s\", "
+							 "\"account_username\":\"%s\""
+							 //", \"timestamp\":%" G_GUINT64_FORMAT ""
+							 " }",
+							 escaped_message,
+							 escaped_buddyname,
+							 escaped_chatname,
+							 purple_account_get_protocol_id(account),
+							 purple_account_get_username(account)
+							 //, timestamp
+							 );
+	
+	events_push_to_queue(output, timestamp);
+	
+	g_free(escaped_message);
+	g_free(escaped_buddyname);
+	g_free(escaped_chatname);
+}
+static void
+sent_chat_msg_cb(PurpleAccount *account, const char *message, int id)
+{
+	PurpleConversation *conv;
+	
+	gchar *output;
+	gchar *escaped_chatname;
+	gchar *escaped_message;
+	guint64 timestamp;
+	
+	conv = purple_find_chat(purple_account_get_connection(account), id);
+	
+	if (!conv || !message)
+		return;
+	
+	escaped_message = juice_utf8_json_encode(message);
+	escaped_chatname = juice_utf8_json_encode(purple_conversation_get_name(conv));
+	
+	timestamp = (guint64)time(NULL) * 1000;
+	
+	output = g_strdup_printf("{ \"type\":\"sent_chat\","
+							 "\"message\":\"%s\", "
+							 "\"chatname\":\"%s\", "
+							 "\"proto_id\":\"%s\", "
+							 "\"account_username\":\"%s\""
+							 //", \"timestamp\":%" G_GUINT64_FORMAT ""
+							 " }",
+							 escaped_message,
+							 escaped_chatname,
+							 purple_account_get_protocol_id(account),
+							 purple_account_get_username(account)
+							 //, timestamp
+							 );
+	
+	events_push_to_queue(output, timestamp);
+	
+	g_free(escaped_message);
+	g_free(escaped_chatname);
+}
 
 static void
 connect_to_signals()
@@ -392,11 +478,25 @@ connect_to_signals()
 								  &ConnectedSignals, PURPLE_CALLBACK(received_im_msg_cb), 
 								  NULL);
 	}
+	if (!ConnectedSignals.received_chat_signal)
+	{
+		ConnectedSignals.received_chat_signal =
+			purple_signal_connect(conv_handle, "received-chat-msg",
+								  &ConnectedSignals, PURPLE_CALLBACK(received_chat_msg_cb), 
+								  NULL);
+	}
 	if (!ConnectedSignals.sent_im_signal)
 	{
 		ConnectedSignals.sent_im_signal =
 			purple_signal_connect(conv_handle, "sent-im-msg",
 								  &ConnectedSignals, PURPLE_CALLBACK(sent_im_msg_cb), 
+								  NULL);
+	}
+	if (!ConnectedSignals.sent_chat_signal)
+	{
+		ConnectedSignals.sent_chat_signal =
+			purple_signal_connect(conv_handle, "sent-chat-msg",
+								  &ConnectedSignals, PURPLE_CALLBACK(sent_chat_msg_cb), 
 								  NULL);
 	}
 	if (!ConnectedSignals.buddy_typing_signal)
