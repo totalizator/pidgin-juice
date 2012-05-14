@@ -120,6 +120,60 @@ juice_parse_headers(const gchar *head)
 	return headers;
 }
 
+#if 0
+#include <zlib.h>
+guchar *
+juice_gzip_data(gchar *data, gssize in_len, gssize *out_len)
+{
+	z_stream zstr;
+	int gzip_err = 0;
+	gchar *data_buffer;
+	gulong gzip_len = G_MAXUINT16;
+	GString *output_string;
+	const char GZ_HEADER[10] = {0x1f, 0x8b, Z_DEFLATED, 0, 0, 0, 0, 0, 0, 3};
+	
+	data_buffer = g_new0(gchar, gzip_len);
+	
+	zstr.next_in = NULL;
+	zstr.avail_in = 0;
+	zstr.zalloc = Z_NULL;
+	zstr.zfree = Z_NULL;
+	zstr.opaque = 0;
+	
+	gzip_err = deflateInit2(&zstr, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -MAX_WBITS, MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY);
+	if (gzip_err != Z_OK)
+	{
+		g_free(data_buffer);
+		purple_debug_error("juice", "No built-in gzip support in zlib\n");
+		return NULL;
+	}
+	
+	zstr.next_in = (Bytef *) data;
+	zstr.avail_in = in_len;
+	zstr.next_out = (Bytef *)data_buffer;
+	zstr.avail_out = gzip_len;
+	
+	gzip_err = inflate(&zstr, Z_SYNC_FLUSH);
+	if (gzip_err != Z_OK)
+	{
+		g_free(data_buffer);
+		purple_debug_error("juice", "Cannot encode gzip data\n");
+		return NULL;
+	}
+	
+	output_string = g_string_new(GZ_HEADER);
+	while (gzip_err == Z_OK)
+	{
+		//append data to buffer
+		output_string = g_string_append_len(output_string, data_buffer, gzip_len - zstr.avail_out);
+		//reset buffer pointer
+		zstr.next_out = (Bytef *)data_buffer;
+		zstr.avail_out = gzip_len;
+		gzip_err = inflate(&zstr, Z_SYNC_FLUSH);
+	}
+}
+#endif
+
 typedef struct _JuiceRequestObject {
 	const gchar *first_line;
 	const gchar *headers;
@@ -688,7 +742,11 @@ juice_get_buddylist(JuiceRequestObject *request, GHashTable *$_GET, gchar **resp
 	{
 		if (PURPLE_BLIST_NODE_IS_CONTACT(purple_blist_node))
 		{
-			buddy = purple_contact_get_priority_buddy((PurpleContact *) purple_blist_node);
+			PurpleContact *contact = (PurpleContact *) purple_blist_node;
+			//TODO group buddies by contact
+			continue;
+		} else if (PURPLE_BLIST_NODE_IS_BUDDY(purple_blist_node))
+			buddy = (PurpleBuddy *) purple_blist_node;
 		} else {
 			continue;
 		}
@@ -963,6 +1021,67 @@ juice_post_sendtyping(JuiceRequestObject *request, GHashTable *$_GET, gchar **re
 	return TRUE;
 }
 
+static gboolean
+juice_get_conversations(JuiceRequestObject *request, GHashTable *$_GET, gchar **response, gsize *response_length)
+{
+	GList *convs;
+	GString *convs_output;
+	gboolean first = TRUE;
+	const gchar *convtype;
+	const gchar *proto_id;
+	gchar *account_username;
+	gchar *title;
+	PurpleAccount *account;
+	gchar *convname;
+	gint unread;
+	
+	convs_output = g_string_new("{\"conversations\":[");
+	for(convs = purple_get_conversations();
+		convs;
+		convs = convs->next)
+	{
+		PurpleConversation *conv = (PurpleConversation *)convs->data;
+		
+		switch(purple_conversation_get_type(conv))
+		{
+			case PURPLE_CONV_TYPE_IM: convtype = "im"; break;
+			case PURPLE_CONV_TYPE_CHAT: convtype = "chat"; break;
+			default: convtype = NULL;
+		}
+		if (convtype == NULL) continue;
+		
+		if (first)
+			first = FALSE;
+		else
+			g_string_append_c(convs_output, ',');
+		
+		convname = juice_utf8_json_encode(purple_conversation_get_name(conv));
+		account = purple_conversation_get_account(conv);
+		proto_id = purple_account_get_protocol_id(account);
+		account_username = juice_utf8_json_encode(purple_account_get_username(account));
+		unread = GPOINTER_TO_INT(purple_conversation_get_data(conv, "unseen-count"));
+		title = juice_utf8_json_encode(purple_conversation_get_title(conv));
+		
+		g_string_append_printf(convs_output, "{  \"name\":\"%s\", "
+												"\"type\":\"%s\", "
+												"\"proto_id\":\"%s\", "
+												"\"unread\":%d, "
+												"\"title\":\"%s\", "
+												"\"account_username\":\"%s\" }",
+												convname, convtype, proto_id,
+												unread, title, account_username);
+		g_free(convname);
+		g_free(account_username);
+	}
+	
+	g_string_append(convs_output, "]}");
+	
+	*response_length = convs_output->len;
+	*response = convs_output->str;
+	g_string_free(convs_output, FALSE);
+	
+	return TRUE;
+}
 
 static void juice_handle_events(JuiceRequestObject *request, gint output_fd);
 
@@ -985,6 +1104,7 @@ init_plugin(PurplePlugin *plugin)
 	juice_add_resource_handler("/history.js", juice_get_history);
 	juice_add_resource_handler("/send_im.js", juice_post_sendim);
 	juice_add_resource_handler("/send_typing.js", juice_post_sendtyping);
+	juice_add_resource_handler("/conversations.js", juice_get_conversations);
 	
 }
 
