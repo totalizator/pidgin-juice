@@ -150,6 +150,7 @@ var Ajax = {
 		};
 		
 		req.open("GET", url, true);
+		req.setRequestHeader( "If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT" );
 		req.send(null);
 		
 		return req;
@@ -168,7 +169,10 @@ var Ajax = {
 		};
 		
 		req.open("POST", url, true);
+		req.setRequestHeader( "If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT" );
 		req.send(post_vars);
+		
+		return req;
 	}
 }
 
@@ -579,6 +583,16 @@ function get_history(buddy) {
 var latest_event_timestamp = 0;
 var eventRequest = 0;
 function get_events() {
+  if (window.EventSource)
+  {
+	var eventRequest = new EventSource('/events.js?eventstream=1&timestamp='+latest_event_timestamp);
+	eventRequest.onmessage = function(event) {
+		get_events_callback(event.data);
+	};
+	eventRequest.onerror = function() {
+		setTimeout(get_events, 1000);
+	}
+  } else {
 	get_events_timeout(60000);
 	latest_event_timestamp_magnitude = (latest_event_timestamp+"").length;
 	//alert(latest_event_timestamp_magnitude + "\n" + latest_event_timestamp);
@@ -587,6 +601,7 @@ function get_events() {
 		latest_event_timestamp = latest_event_timestamp * 1000;
 	}
 	eventRequest = Ajax.get('/events.js?timestamp='+latest_event_timestamp, get_events_callback);
+  }
 }
 function checkEventRequestStatus() {
 	if (!eventRequest)
