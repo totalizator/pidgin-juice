@@ -585,11 +585,12 @@ var eventRequest = 0;
 function get_events() {
   if (window.EventSource)
   {
-	var eventRequest = new EventSource('/events.js?eventstream=1&timestamp='+latest_event_timestamp);
-	eventRequest.onmessage = function(event) {
+	var source = new EventSource('/events.js?eventstream=1&timestamp='+latest_event_timestamp);
+	source.onmessage = function(event) {
 		get_events_callback(event.data);
 	};
-	eventRequest.onerror = function() {
+	source.onerror = function() {
+		source.close();
 		setTimeout(get_events, 1000);
 	}
   } else {
