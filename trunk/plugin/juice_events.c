@@ -154,13 +154,14 @@ write_to_client(gint output_fd)
 	}
 		
 	chan = g_hash_table_lookup(channels, GINT_TO_POINTER(output_fd));
-	g_hash_table_steal(channels, GINT_TO_POINTER(output_fd));
+	if (!chan->is_eventstream)
+		g_hash_table_steal(channels, GINT_TO_POINTER(output_fd));
 	if (!chan || !chan->timeout) {
 		purple_debug_info("pidgin_juice", "Couldn't find channel struct.\n");
 		//there was no real record of the channel.. don't try write to it
 		return FALSE;
 	}
-	else {
+	else if (!chan->is_eventstream) {
 		purple_timeout_remove(chan->timeout);
 	}
 	
@@ -183,6 +184,8 @@ write_to_client(gint output_fd)
 				returnstring = g_string_append_c(returnstring, ',');
 			
 			returnstring = g_string_append(returnstring, next_event->event);
+			
+			chan->timestamp = MAX(next_event->timestamp, chan->timestamp);
 		}
 		g_list_free(latest_events);
 	}
@@ -589,6 +592,7 @@ juice_handle_events(JuiceRequestObject *request, gint output_fd)
 	
 	if (chan->is_eventstream)
 	{
+		purple_debug_info("juice", "Event-stream connection\n");
 		write(output_fd, "Content-type: text/event-stream\r\n\r\n", 35);
 	}
 	
