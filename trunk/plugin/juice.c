@@ -745,7 +745,7 @@ juice_get_buddylist(JuiceRequestObject *request, GHashTable *$_GET, gchar **resp
 			PurpleContact *contact = (PurpleContact *) purple_blist_node;
 			//TODO group buddies by contact
 			continue;
-		} else if (PURPLE_BLIST_NODE_IS_BUDDY(purple_blist_node))
+		} else if (PURPLE_BLIST_NODE_IS_BUDDY(purple_blist_node)) {
 			buddy = (PurpleBuddy *) purple_blist_node;
 		} else {
 			continue;

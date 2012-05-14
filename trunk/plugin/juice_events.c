@@ -29,6 +29,7 @@ typedef struct _JuiceChannel {
 	gint fd;
 	guint timeout;
 	guint64 timestamp;
+	gboolean is_eventstream;
 } JuiceChannel;
 
 static gboolean 
@@ -38,23 +39,23 @@ remove_old_events(gpointer dunno)
 	guint64 old_timestamp;
 	JuiceEvent *event;
 	
-	purple_debug_info("pidgin_juice", "Remove old events from event queue\n");
+	//purple_debug_info("pidgin_juice", "Remove old events from event queue\n");
 	
 	//old_timestamp = time(NULL) - 3 * 60 * 1000; //3 minutes old
 	old_timestamp = ((guint64)time(NULL)) * 1000 - 10 * 1000; //3 minutes old
 	while (!g_queue_is_empty(&queue))
 	{
 		event = g_queue_peek_head(&queue);
-		purple_debug_info("pidgin_juice", "queue is not empty. old:%" G_GUINT64_FORMAT " event:%" G_GUINT64_FORMAT "\n", old_timestamp, event->timestamp);
+		//purple_debug_info("pidgin_juice", "queue is not empty. old:%" G_GUINT64_FORMAT " event:%" G_GUINT64_FORMAT "\n", old_timestamp, event->timestamp);
 		if (event->timestamp > old_timestamp)
 			break;
-		purple_debug_info("pidgin_juice", "timestamp is old\n");
+		//purple_debug_info("pidgin_juice", "timestamp is old\n");
 		event = g_queue_pop_head(&queue);
 		g_free(event->event);
 		g_free(event);
 	}
 
-	purple_debug_info("pidgin_juice", "Done removing old events.\n");
+	//purple_debug_info("pidgin_juice", "Done removing old events.\n");
 	return TRUE;
 }
 
@@ -82,13 +83,13 @@ static GList
 	for(i=max_length-1; i>=0; i--)
 	{
 		event = g_queue_peek_nth(&queue, i);
-		purple_debug_info("pidgin_juice", "comparing event timestamp %" G_GUINT64_FORMAT " against requested timestamp %" G_GUINT64_FORMAT "\n", event->timestamp, time);
+		//purple_debug_info("pidgin_juice", "comparing event timestamp %" G_GUINT64_FORMAT " against requested timestamp %" G_GUINT64_FORMAT "\n", event->timestamp, time);
 		if (event->timestamp <= time) {
-			purple_debug_info("pidgin_juice", "Found event with timestamp %" G_GUINT64_FORMAT " so not adding any more events to return list.\n", event->timestamp);
+			//purple_debug_info("pidgin_juice", "Found event with timestamp %" G_GUINT64_FORMAT " so not adding any more events to return list.\n", event->timestamp);
 			break;
 		}
 		else {
-			purple_debug_info("pidgin_juice", "Adding event with timestamp %" G_GUINT64_FORMAT " to return list.\n", event->timestamp);
+			//purple_debug_info("pidgin_juice", "Adding event with timestamp %" G_GUINT64_FORMAT " to return list.\n", event->timestamp);
 			returnlist = g_list_prepend(returnlist, event);
 		}
 	}
@@ -171,7 +172,7 @@ write_to_client(gint output_fd)
 									   "{ \"type\":\"continue\" }");
 	} else {
 		latest_events = get_events_since(chan->timestamp);
-		purple_debug_misc("pidgin_juice", "Events in the list: %u\n", g_list_length(latest_events));
+		//purple_debug_misc("pidgin_juice", "Events in the list: %u\n", g_list_length(latest_events));
 		for(current=latest_events; current; current=g_list_next(current))
 		{
 			next_event = current->data;
@@ -188,11 +189,18 @@ write_to_client(gint output_fd)
 	
 	returnstring = g_string_append(returnstring, " ] }");
 	
-	headers = g_strdup_printf(
+	if (!chan->is_eventstream)
+	{
+		headers = g_strdup_printf(
 					   "Content-type: application/json\r\n"
 					   "Content-length: %d\r\n\r\n", returnstring->len);
 	
-	g_string_prepend(returnstring, headers);
+		g_string_prepend(returnstring, headers);
+	} else {
+		headers = g_strdup_printf("id: %" G_GUINT64_FORMAT "\r\ndata: ", chan->timestamp);
+		g_string_prepend(returnstring, headers);
+		g_string_append_printf(returnstring, "\r\n\r\n");
+	}
 	
 	purple_debug_misc("pidgin_juice", "The following events are about to be written to client:\n%s\n", returnstring->str);
 	write(output_fd, returnstring->str, returnstring->len);
@@ -200,7 +208,10 @@ write_to_client(gint output_fd)
 	g_free(headers);
 	g_string_free(returnstring, TRUE);
 	
-	disconnect_signals();
+	if (!chan->is_eventstream)
+		disconnect_signals();
+	else if (ConnectedSignals.disconnect_timer)
+		purple_timeout_remove(ConnectedSignals.disconnect_timer);
 	
 	return FALSE;
 }
@@ -553,7 +564,7 @@ juice_handle_events(JuiceRequestObject *request, gint output_fd)
 	guint64 timestamp;
 	GHashTable *$_GET = juice_parse_query(request->query);
 	
-	write(output_fd, "HTTP/1.0 200 OK\r\n", 17);
+	write(output_fd, "HTTP/1.0 200 OK\r\nConnection: keep-alive\r\n", 41);
 	
 	purple_debug_info("pidgin_juice", "Client connected for events.\n");
 	
@@ -565,7 +576,6 @@ juice_handle_events(JuiceRequestObject *request, gint output_fd)
 	//Otherwise, store up the channel
 	timeout = purple_timeout_add_seconds(60, (GSourceFunc)write_to_client, GINT_TO_POINTER(output_fd));
 	timestamp = g_ascii_strtoull((gchar *)g_hash_table_lookup($_GET, "timestamp"), NULL, 10);
-	g_hash_table_destroy($_GET);
 	
 	purple_debug_info("pidgin_juice", "get events since: %" G_GUINT64_FORMAT "\n", timestamp);
 	
@@ -573,6 +583,14 @@ juice_handle_events(JuiceRequestObject *request, gint output_fd)
 	chan->fd = output_fd;
 	chan->timeout = timeout;
 	chan->timestamp = timestamp;
+	chan->is_eventstream = (g_hash_table_lookup($_GET, "eventstream") != NULL);
+	
+	g_hash_table_destroy($_GET);
+	
+	if (chan->is_eventstream)
+	{
+		write(output_fd, "Content-type: text/event-stream\r\n\r\n", 35);
+	}
 	
 	g_hash_table_insert(channels, GINT_TO_POINTER(output_fd), chan);
 	
